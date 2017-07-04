@@ -232,9 +232,23 @@ data TransportParameters = TransportParameterss {
                         }
                         deriving Show
 
--- Should we  replace TransportParameters?
-data Config = Config { configPMTU :: Int }
+-- entity of transport parameters.
+-- TODO: the config will be replaced hash map structure.
+-- key: the digit , value: numerical value 0x000 ~ 0xfeff
+data Config = Config { configMaxStreamData :: Int
+            , configMaxData :: Int
+            , configMaxStreamId :: StreamId
+            , configTimeout :: QUICTime
+            , configTruncateConnectionId :: ConnectionId
+            , configMaxPacketSize :: Int}
             deriving Show
+
+upperLimitMaxPacketSize :: Int -> Bool
+upperLimitMaxPacketSize i = i < 65527
+
+lowerLimitMaxPacketSize :: Int -> Bool
+lowerLimitMaxPacketSize i = i > 1252
+
 
 -- the number that library support protocol version.
 supportedVersion :: [Int32]
