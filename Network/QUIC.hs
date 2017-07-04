@@ -291,3 +291,7 @@ isSupportedversion = undefined
 supportedVersions :: [QUICVersion] -> [QUICVersion]
 supportedVersions = undefined
 
+-- Init STREAM
+
+newStreamFrame :: Frame
+newStreamFrame = undefined
