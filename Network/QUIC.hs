@@ -279,3 +279,15 @@ toUTCTime = undefined
 
 fromUTCTime :: UTCTime -> QUICTime
 fromUTCTime = undefined
+
+-- QUIC Version  Negtiaton
+
+isVaildVersion :: QUICVersion -> Bool
+isVaildVersion = undefined
+
+isSupportedversion :: QUICVersion -> Bool
+isSupportedversion = undefined
+
+supportedVersions :: [QUICVersion] -> [QUICVersion]
+supportedVersions = undefined
+
