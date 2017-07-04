@@ -63,7 +63,7 @@ withManager = undefined
 -- while reconnection or handshake, we should  use long Header format.
 -- otherwise, we must use short Header format.
 data Header = LongHeader ConnectionId PacketNumber QUICVersion
-            | ShortHeader ConnectionId PacketNumber
+            | ShortHeader (Maybe ConnectionId) PacketNumber
             deriving Show
 
 data HeaderType = LongHeaderType | ShortHeaderType
