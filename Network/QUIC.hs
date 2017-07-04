@@ -23,7 +23,8 @@ import qualified Data.ByteString       as BS
 import qualified Data.HashTable.IO     as HashTbl
 import           Data.Int
 import           Data.Maybe
-import Data.Word
+import           Data.Time.Clock
+import           Data.Word
 import qualified Network.QUIC.Internal as I
 import           Network.Socket
 
@@ -258,3 +259,9 @@ parseTime bs = undefined
   where
     mantissa = undefined
     exponent = undefined
+
+toUTCTime :: QUICTime -> UTCTime
+toUTCTime = undefined
+
+fromUTCTime :: UTCTime -> QUICTime
+fromUTCTime = undefined
