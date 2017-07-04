@@ -31,6 +31,8 @@ import           Network.Socket
 data ManagerSetting = ManagerSetting
                     deriving Show
 
+
+-- Manager API
 -- default ManageSetting configuration paramater
 defaultManagerSetting = ManagerSetting
 
@@ -53,6 +55,9 @@ closeManager mgr = undefined
 -- withManager take care action IO a.
 withManager :: Manager -> IO a -> IO [Frame]
 withManager = undefined
+
+-- Header
+
 
 -- Header is header format.
 -- while reconnection or handshake, we should  use long Header format.
@@ -235,7 +240,7 @@ data EndPoint = EndPoint { endPointMode :: Mode
 
 
 -- TODO: QUIC WG discuss to simplify Stream State.
--- it should obey the reuslt of discussion.
+-- it should obey the result of discussion.
 data Handle = Idle | Open | RemoteHalfClose | LocalHalfClose | Closed
             deriving Show
 
