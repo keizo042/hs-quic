@@ -202,6 +202,8 @@ type QUICResult a = Either QUICError a
 
 
 -- TODO: porting from draft code like c++.  It should be replaced more suitable data format.
+-- TODO: it demands to adapt TLS. they are requred TLS extension "quic_transport_paramters".
+
 
 data TransportParameterId = TransParamInitialMaxStreamData
                           | TransParamInitialMaxData
