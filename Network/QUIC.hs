@@ -66,6 +66,15 @@ data Header = LongHeader ConnectionId PacketNumber QUICVersion
             | ShortHeader ConnectionId PacketNumber
             deriving Show
 
+data HeaderType = LongHeaderType | ShortHeaderType
+                deriving Show
+
+isHeaderType :: Word8 -> HeaderType
+isHeaderType b
+  | (b == 0x80) = LongHeaderType
+  | otherwise =  ShortHeaderType
+
+
 data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | ClientInitial
                 | ServerStatelessRetry
