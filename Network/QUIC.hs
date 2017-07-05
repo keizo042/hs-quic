@@ -159,6 +159,15 @@ data Frame = Stream !StreamId !Offset !Int !ByteString
 
 decodeHeader :: ByteString -> QUICResult (Header, ByteString)
 decodeHeader bs = undefined
+  where
+    decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
+    decodeLongHeader = undefined
+    decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
+    decodeShortHeader = undefined
+
+
+
+
 
 encodeHeader :: Header -> ByteString
 encodeHeader hdr = undefined
