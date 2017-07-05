@@ -24,11 +24,14 @@ module Network.QUIC
 import           Control.Monad
 import           Data.ByteString       (ByteString)
 import qualified Data.ByteString       as BS
+import qualified Data.ByteString.Lazy       as LBS
 import qualified Data.Binary as B
 import           Data.Int
 import qualified Data.Map.Strict       as M
 import           Data.Maybe
 import           Data.Time.Clock
+import qualified Data.Binary.Get as Get
+import qualified Data.Binary.Put as Put
 import           Data.Word
 import qualified Network.QUIC.Internal as I
 import qualified Network.Socket        as S
@@ -129,8 +132,27 @@ bitToFrameType 0x0b = Just NewConnectionType
 bitToFrameType -31 = Just StreamType -- 0xa0 - 0xbf
 bitToFrameType -63  = Just AckType -- 0xc0 - 0xff
 
-type StreamId = Int32
-type Offset = Int64
+type StreamId = Int
+
+putStreamId :: StreamId -> Put.Put
+putStreamId = undefined
+
+getStreamId :: Int -> Get.Get StreamId
+getStreamId 1 = I.getInt8
+getStreamId 2 = I.getInt16
+getStreamId 3 = I.getInt24
+getStreamId 4 = I.getInt32
+
+type Offset = Integer
+
+getOffset :: Int -> Get.Get Offset
+getOffset 0 = return 0
+getOffset 2 = fromIntegral <$> I.getInt16
+getOffset 4 = fromIntegral <$> I.getInt32
+getOffset 8 = fromIntegral <$> I.getInt64
+
+putOffset :: Offset -> Put.Put
+putOffset offset = undefined
 
 data QUICTime = QUICTime
              deriving Show
@@ -141,7 +163,7 @@ data AckBlock = AckBlock [PacketNumber]
 data AckTimeStamp = AckTimeStamp [QUICTime]
                   deriving Show
 
-data Frame = Stream !StreamId !Offset !Int !ByteString
+data Frame = Stream !StreamId !Offset !(Maybe Int)
            | Ack (Maybe Int) Int PacketNumber QUICTime QUICTime AckBlock AckTimeStamp
            | MaxData Int64
            | MaxStreamData StreamId Int
@@ -184,8 +206,8 @@ decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
 decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
                        Nothing    -> undefined
                        Just ft  -> case ft of
-                         (StreamType bit)     -> decodeStreamFrame hdr bs
-                         (AckType bit)        -> decodeAckFrame hdr bs
+                         (StreamType bit)     -> decodeStreamFrame hdr bit bs
+                         (AckType bit)        -> decodeAckFrame hdr bit bs
                          MaxDataType          -> decodeMaxDataFrame hdr bs
                          MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
                          MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
@@ -197,8 +219,18 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
                          NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
                          ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
    where
-     decodeStreamFrame  hdr bs = undefined
-     decodeAckFrame   = undefined
+     decodeStreamFrame :: Header -> Word8 -> ByteString -> QUICResult (Frame, ByteString)
+     decodeStreamFrame  hdr bit bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
+                                       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                       _ -> undefined
+                                  where
+                                    sidn :: Int
+                                    sidn = undefined
+                                    offn :: Int
+                                    offn = undefined
+                                    decode' :: Get.Get Frame
+                                    decode' = undefined -- Just <$> Stream <*> (getStreamId sidn) <*> (getOffset offn) <*> I.getInt16
+     decodeAckFrame hdr bit bs = undefined
      decodeMaxDataFrame = undefined
      decodeMaxStreamDataFrame = undefined
      decodeMaxStreamIdFrame = undefined
@@ -239,7 +271,17 @@ encode (Packet hdr fs) = encodeHeader hdr `BS.append` encodeFrames fs
 
 
 type PacketNumber = Integer
-type ConnectionId = Int64
+
+getPacketNumber = undefined
+
+type ConnectionId = Integer
+
+putConnectionId :: ConnectionId -> Put.Put
+putConnectionId = Put.putWord64be . fromIntegral
+
+getConnectionId :: Get.Get ConnectionId
+getConnectionId = fromIntegral <$> I.getInt64
+
 type QUICVersion = Int32
 data Packet = Packet Header Payload
             deriving Show
