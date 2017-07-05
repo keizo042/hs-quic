@@ -165,7 +165,9 @@ encodeHeader hdr = undefined
 
 decodeFrames :: Header -> ByteString -> QUICResult [Frame]
 decodeFrames hdr bs = case (decodeFrame hdr bs) of
-                        Right r -> fst r : decodeFrames snd r
+                        Right (f,bs') -> case (decodeFrames hdr bs') of
+                                     Right fs -> Right (f : fs)
+                                     Left e -> Left e
                         Left e  -> Left e
 
 
