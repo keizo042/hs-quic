@@ -164,19 +164,19 @@ data AckTimeStamp = AckTimeStamp [QUICTime]
                   deriving Show
 
 data Frame = Stream !StreamId !Offset !(Maybe Int)
-           | Ack (Maybe Int) Int PacketNumber QUICTime QUICTime AckBlock AckTimeStamp
-           | MaxData Int64
-           | MaxStreamData StreamId Int
-           | MaxStreamId StreamId
+           | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
+           | MaxData !Int64
+           | MaxStreamData !StreamId !Int
+           | MaxStreamId !StreamId
            | Blocked
-           | StreamBlocked StreamId
+           | StreamBlocked !StreamId
            | StreamIdNeeded
-           | RstStream StreamId QUICErrorCode Offset
+           | RstStream !StreamId !QUICErrorCode !Offset
            | Padding
            | Ping
-           | NewConnectionId Int ConnectionId
-           | ConnectionClose QUICErrorCode !ByteString
-           | Goaway StreamId StreamId
+           | NewConnectionId !Int !ConnectionId
+           | ConnectionClose !QUICErrorCode !ByteString
+           | Goaway !StreamId !StreamId
            deriving Show
 
 decodeHeader :: ByteString -> QUICResult (Header, ByteString)
