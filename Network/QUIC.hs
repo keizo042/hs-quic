@@ -254,8 +254,8 @@ quicErrorToInt :: QUICError -> Int
 quicErrorToInt (QUICErrorCode code) = quicErrorCodeToInt code
 quicErrorToInt (Otherwise i)        = i
 
-IntToQUICError :: Int -> QUICError
-IntToQUICError = undefined
+intToQUICError :: Int -> QUICError
+intToQUICError = undefined
 
 data QUICError = QUICErrorCode QUICErrorCode
                | Otherwise Int
