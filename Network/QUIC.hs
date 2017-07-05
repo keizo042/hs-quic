@@ -15,6 +15,10 @@ module Network.QUIC
 
     TransportParameters(..),
     TransportParameter(..),
+
+-- Tesing
+    testDataMap,
+    testStreamData
   )
   where
 import           Control.Monad
@@ -328,8 +332,11 @@ waitData = undefined
 insertStreamData = undefined
 
 -- Stream Data Map , Key: Stream Id / Value: (Packet Number, Data)
+-- the data is specific Stream Id Data
 
-type DataMap = M.Map StreamId [(PacketNumber, ByteString)]
+type StreamData = M.Map PacketNumber ByteString
+
+type DataMap = M.Map StreamId StreamData
 
 initDataMap :: DataMap
 initDataMap = M.empty
@@ -339,17 +346,34 @@ insertDataMap :: DataMap
               -> PacketNumber
               -> ByteString
               -> DataMap
-insertDataMap = undefined
+insertDataMap m sid pn bs = modify' sid pn bs sd m
+    where
+      sd = lookup' sid m
+      lookup' ::  StreamId -> DataMap -> (Maybe StreamData)
+      lookup' sid' m' = M.lookup sid' m'
 
-lookupDataMap :: DataMap
-              -> StreamId
-              -> ByteString
-lookupDataMap = undefined
+      modify' :: StreamId -> PacketNumber -> ByteString -> (Maybe StreamData) -> DataMap -> DataMap
+      modify' sid' pn' bs' sd0 m' = M.insert sid' sd1 m'
+        where
+          sd1 = case sd0 of
+                    (Just sd)   ->  M.insert pn' bs' sd
+                    Nothing     ->  M.insert pn' bs' M.empty
 
-dropDataMap :: DataMap -> StreamId -> DataMap
-dropDataMap = undefined
+dropDataMap :: StreamId -> DataMap -> DataMap
+dropDataMap sid m = M.delete sid m
 
-takeDataMap :: DataMap
-            -> StreamId
-            -> (DataMap, ByteString)
-takeDataMap = undefined
+takeDataMap :: StreamId
+            -> DataMap
+            -> (DataMap, Maybe ByteString)
+takeDataMap sid m = case (M.lookup sid m) of
+                      (Just sd) -> (M.delete sid m, Just $ toBS sd)
+                      (Nothing) -> (m, Nothing)
+                where
+                  toBS :: StreamData -> ByteString
+                  toBS sd = foldl BS.append BS.empty $ map snd $ M.toList sd
+                  f :: ByteString -> (PacketNumber, ByteString) -> ByteString
+                  f b (k,v) = b `BS.append` v
+
+
+testDataMap = undefined
+testStreamData = undefined
