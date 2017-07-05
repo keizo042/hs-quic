@@ -172,34 +172,36 @@ decodeFrames hdr bs = case (decodeFrame hdr bs) of
 
 
 decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
-decodeFrame hdr bs = case (bitToFrameType . BS.head bs) of
-                       StreamType           -> decodeStreamFrame hdr bs
-                       AckType              -> decodeAckFrame hdr bs
-                       MaxDataType          -> decodeMaxDataFrame hdr bs
-                       MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
-                       MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
-                       StreamBlockedType    -> decodeStreamBlockedFrame hdr bs
-                       StreamIdNeededType   -> decodeStreamIdNeededFrame hdr bs
-                       RstStreamType        -> decodeRstStreamFrame hdr bs
-                       PaddingType          -> decodePaddingFrame hdr bs
-                       PingType             -> decodePingFrame hdr bs
-                       NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
-                       ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
+decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
+                       Nothing    -> undefined
+                       Just ft  -> case ft of
+                         (StreamType bit)     -> decodeStreamFrame hdr bs
+                         (AckType bit)        -> decodeAckFrame hdr bs
+                         MaxDataType          -> decodeMaxDataFrame hdr bs
+                         MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
+                         MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
+                         StreamBlockedType    -> decodeStreamBlockedFrame hdr bs
+                         StreamIdNeededType   -> decodeStreamIdNeededFrame hdr bs
+                         RstStreamType        -> decodeRstStreamFrame hdr bs
+                         PaddingType          -> decodePaddingFrame hdr bs
+                         PingType             -> decodePingFrame hdr bs
+                         NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
+                         ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
    where
-     decodeStreamFrame  = Stream undefined
-     decodeAckFrame   = Ack undefined
-     decodeMaxDataFrame = MaxData undefined
-     decodeMaxStreamDataFrame = MaxStreamData undefined
-     decodeMaxStreamIdFrame = MaxStreamId undefined
-     decodeBlockedFrame = Blocked undefined
-     decodeStreamBlockedFrame = StreamBlocked undefined
-     decodeStreamIdNeededFrame = StreamIdNeeded undefined
-     decodeRstStreamFrame = RstStream undefined
+     decodeStreamFrame  hdr bs = undefined
+     decodeAckFrame   = undefined
+     decodeMaxDataFrame = undefined
+     decodeMaxStreamDataFrame = undefined
+     decodeMaxStreamIdFrame = undefined
+     decodeBlockedFrame = undefined
+     decodeStreamBlockedFrame = undefined
+     decodeStreamIdNeededFrame = undefined
+     decodeRstStreamFrame = undefined
      decodePaddingFrame _ bs= Right (Padding, BS.tail bs)
      decodePingFrame _ bs = Right (Ping, BS.tail bs)
-     decodeNewConnectionIdFrame = NewConnectionId undefined
-     decodeConnectionCloseFrame = ConnectionClose  undefined
-     decodeGoawayFrame = Goaway undefined
+     decodeNewConnectionIdFrame = undefined
+     decodeConnectionCloseFrame = undefined
+     decodeGoawayFrame = undefined
 
 
 
