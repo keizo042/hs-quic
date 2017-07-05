@@ -310,11 +310,11 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
 
 
 encodeFrames :: [Frame] -> ByteString
-encodeFrames fs = undefined
-
+encodeFrames [] = BS.empty
+encodeFrames (f:fs) = encodeFrame f `BS.append` encodeFrames fs
 
 encodeFrame :: Frame -> ByteString
-encodeFrame = undefined
+encodeFrame f = LBS.toStrict  undefined
   where
     encodeStramFrame = undefined
     encodeAckFrame = undefined
