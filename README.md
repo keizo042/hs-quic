@@ -3,14 +3,18 @@ quic
 
 
 ## Descriotion
+IETF Quick UDP Intenet Protocol implementaion
 
-## sample
+## example
+please  see under examples
 
 ## Requirement
 
 ## Install
+you can use stack
 
 ## LICENSE
+BSD3
 
 ## AUTHOR
 
