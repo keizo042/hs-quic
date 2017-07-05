@@ -223,26 +223,89 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
      decodeStreamFrame  hdr bit bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
                                        (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                        _ -> undefined
-                                  where
-                                    sidn :: Int
-                                    sidn = undefined
-                                    offn :: Int
-                                    offn = undefined
-                                    decode' :: Get.Get Frame
-                                    decode' = undefined -- Just <$> Stream <*> (getStreamId sidn) <*> (getOffset offn) <*> I.getInt16
-     decodeAckFrame hdr bit bs = undefined
-     decodeMaxDataFrame = undefined
-     decodeMaxStreamDataFrame = undefined
-     decodeMaxStreamIdFrame = undefined
-     decodeBlockedFrame = undefined
-     decodeStreamBlockedFrame = undefined
-     decodeStreamIdNeededFrame = undefined
-     decodeRstStreamFrame = undefined
-     decodePaddingFrame _ bs= Right (Padding, BS.tail bs)
+
+        where
+           sidn :: Int
+           sidn = undefined
+           offn :: Int
+           offn = undefined
+           decode' :: Get.Get Frame
+           decode' = undefined -- Just <$> Stream <*> (getStreamId sidn) <*> (getOffset offn) <*> I.getInt16
+     decodeAckFrame hdr bit bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+     decodeMaxDataFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeMaxStreamDataFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeMaxStreamIdFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeBlockedFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeStreamBlockedFrame  hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeStreamIdNeededFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeRstStreamFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodePaddingFrame _ bs = Right (Padding, BS.tail bs)
      decodePingFrame _ bs = Right (Ping, BS.tail bs)
-     decodeNewConnectionIdFrame = undefined
-     decodeConnectionCloseFrame = undefined
-     decodeGoawayFrame = undefined
+     decodeNewConnectionIdFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+     decodeConnectionCloseFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+     decodeGoawayFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> undefined
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
 
 
 
