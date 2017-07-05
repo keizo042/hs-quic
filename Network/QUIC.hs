@@ -24,6 +24,7 @@ module Network.QUIC
 import           Control.Monad
 import           Data.ByteString       (ByteString)
 import qualified Data.ByteString       as BS
+import qualified Data.Binary as B
 import           Data.Int
 import qualified Data.Map.Strict       as M
 import           Data.Maybe
