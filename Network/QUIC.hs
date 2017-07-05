@@ -33,7 +33,8 @@ import           Data.Word
 import qualified Network.QUIC.Internal as I
 import qualified Network.Socket        as S
 
-data ManagerSetting = ManagerSetting
+data ManagerSetting = ManagerSetting { managerSettingPort :: Int
+                    , managerSettingHost :: !String}
                     deriving Show
 
 
