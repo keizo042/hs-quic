@@ -162,12 +162,53 @@ encodeHeader :: Header -> ByteString
 encodeHeader hdr = undefined
 
 decodeFrames :: Header -> ByteString -> QUICResult [Frame]
-decodeFrames hdr bs = undefined
-  where
-    decodeFrames' = undefined
+decodeFrames hdr bs = case (decodeFrame hdr bs) of
+                        Right r -> fst r : decodeFrames snd r
+                        Left e  -> Left e
+
+
+decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
+decodeFrame hdr bs = case (bitToFrameType . BS.head bs) of
+                       StreamType           -> decodeStreamFrame hdr bs
+                       AckType              -> decodeAckFrame hdr bs
+                       MaxDataType          -> decodeMaxDataFrame hdr bs
+                       MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
+                       MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
+                       StreamBlockedType    -> decodeStreamBlockedFrame hdr bs
+                       StreamIdNeededType   -> decodeStreamIdNeededFrame hdr bs
+                       RstStreamType        -> decodeRstStreamFrame hdr bs
+                       PaddingType          -> decodePaddingFrame hdr bs
+                       PingType             -> decodePingFrame hdr bs
+                       NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
+                       ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
+   where
+     decodeStreamFrame  = Stream undefined
+     decodeAckFrame   = Ack undefined
+     decodeMaxDataFrame = MaxData undefined
+     decodeMaxStreamDataFrame = MaxStreamData undefined
+     decodeMaxStreamIdFrame = MaxStreamId undefined
+     decodeBlockedFrame = Blocked undefined
+     decodeStreamBlockedFrame = StreamBlocked undefined
+     decodeStreamIdNeededFrame = StreamIdNeeded undefined
+     decodeRstStreamFrame = RstStream undefined
+     decodePaddingFrame _ bs= Right (Padding, BS.tail bs)
+     decodePingFrame _ bs = Right (Ping, BS.tail bs)
+     decodeNewConnectionIdFrame = NewConnectionId undefined
+     decodeConnectionCloseFrame = ConnectionClose  undefined
+     decodeGoawayFrame = Goaway undefined
+
+
 
 encodeFrames :: [Frame] -> ByteString
 encodeFrames fs = undefined
+
+
+encodeFrame :: Frame -> ByteString
+encodeFrame = undefined
+  where
+    encodeStramFrame = undefined
+    encodeAckFrame = undefined
+    encodeAck = undefined
 
 decode :: ByteString -> QUICResult Packet
 decode bs = decode' $ decodeHeader bs
