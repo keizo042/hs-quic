@@ -236,11 +236,11 @@ data TransportParameters = TransportParameterss {
 -- TODO: the config will be replaced hash map structure.
 -- key: the digit , value: numerical value 0x000 ~ 0xfeff
 data Config = Config { configMaxStreamData :: Int
-            , configMaxData :: Int
-            , configMaxStreamId :: StreamId
-            , configTimeout :: QUICTime
-            , configTruncateConnectionId :: ConnectionId
-            , configMaxPacketSize :: Int}
+            , configMaxData                :: Int
+            , configMaxStreamId            :: StreamId
+            , configTimeout                :: QUICTime
+            , configTruncateConnectionId   :: ConnectionId
+            , configMaxPacketSize          :: Int}
             deriving Show
 
 upperLimitMaxPacketSize :: Int -> Bool
