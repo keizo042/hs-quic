@@ -20,8 +20,8 @@ module Network.QUIC
 import           Control.Monad
 import           Data.ByteString       (ByteString)
 import qualified Data.ByteString       as BS
-import qualified Data.HashTable.IO     as HashTbl
 import           Data.Int
+import qualified Data.Map.Strict       as M
 import           Data.Maybe
 import           Data.Time.Clock
 import           Data.Word
@@ -316,3 +316,40 @@ supportedVersions = undefined
 
 newStreamFrame :: Frame
 newStreamFrame = undefined
+
+
+-- Obtain Stream Data
+
+waitData :: StreamId -> ByteString
+waitData = undefined
+
+-- Stream Data Internaly
+
+insertStreamData = undefined
+
+-- Stream Data Map , Key: Stream Id / Value: (Packet Number, Data)
+
+type DataMap = M.Map StreamId [(PacketNumber, ByteString)]
+
+initDataMap :: DataMap
+initDataMap = M.empty
+
+insertDataMap :: DataMap
+              -> StreamId
+              -> PacketNumber
+              -> ByteString
+              -> DataMap
+insertDataMap = undefined
+
+lookupDataMap :: DataMap
+              -> StreamId
+              -> ByteString
+lookupDataMap = undefined
+
+dropDataMap :: DataMap -> StreamId -> DataMap
+dropDataMap = undefined
+
+takeDataMap :: DataMap
+            -> StreamId
+            -> (DataMap, ByteString)
+takeDataMap = undefined
