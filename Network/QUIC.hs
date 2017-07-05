@@ -30,7 +30,7 @@ import           Data.Maybe
 import           Data.Time.Clock
 import           Data.Word
 import qualified Network.QUIC.Internal as I
-import           Network.Socket
+import qualified Network.Socket        as S
 
 data ManagerSetting = ManagerSetting
                     deriving Show
@@ -43,7 +43,7 @@ defaultManagerSetting = ManagerSetting
 -- socket, connection stream, key abstraction.
 data Manager = Manager { mgrConns :: [Int]
                         ,mgrPeer  :: Int
-                        ,mgrSock  :: Socket
+                        ,mgrSock  :: S.Socket
                         -- hash from 4 tuple to socket
                        }
              deriving Show
