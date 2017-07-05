@@ -397,8 +397,8 @@ insertDataMap m sid pn bs = modify' sid pn bs sd m
       modify' sid' pn' bs' sd0 m' = M.insert sid' sd1 m'
         where
           sd1 = case sd0 of
-                    (Just sd)   ->  M.insert pn' bs' sd
-                    Nothing     ->  M.insert pn' bs' M.empty
+                    (Just sd) ->  M.insert pn' bs' sd
+                    Nothing   ->  M.insert pn' bs' M.empty
 
 dropDataMap :: StreamId -> DataMap -> DataMap
 dropDataMap sid m = M.delete sid m
