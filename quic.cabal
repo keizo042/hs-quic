@@ -21,6 +21,7 @@ library
                        async, 
                        network,
                        time,
+                       binary,
                        containers
   default-language:    Haskell2010
 
