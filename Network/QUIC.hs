@@ -574,5 +574,12 @@ takeDataMap sid m = case (M.lookup sid m) of
                   f b (k,v) = b `BS.append` v
 
 
+
+--
+-- testing
+--
 testDataMap = undefined
 testStreamData = undefined
+
+
+
