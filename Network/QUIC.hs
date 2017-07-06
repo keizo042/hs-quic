@@ -116,7 +116,6 @@ data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | ServerCleartext
                 | ClientCleartext
                 | ZeroRTTProtected
-                | OneRTTProtected
                 | OneRTTProtectedKeyPhaseZero
                 | OneRTTProtectedKeyPhaseOne
                 | PublicReset
