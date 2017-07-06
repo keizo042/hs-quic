@@ -22,6 +22,7 @@ library
                        network,
                        time,
                        binary,
+                       cereal,
                        containers,
                        tls,
                        cryptonite
