@@ -106,6 +106,7 @@ data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | OneRTTProtectedKeyPhaseZero
                 | OneRTTProtectedKeyPhaseOne
                 | PublicReset
+                deriving (Show, Eq)
 
 data FrameType = StreamType Word8
                | AckType Word8
