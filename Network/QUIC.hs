@@ -129,6 +129,7 @@ hasConnectionId = undefined
 
 hasKeyPhase :: Word8 -> Bool
 hasKeyPhase = undefined
+
 bitToFrameType :: Word8 -> Maybe FrameType
 bitToFrameType 0x00 = Just PaddingType
 bitToFrameType 0x01 = Just RstStreamType
