@@ -86,6 +86,7 @@ isHeaderType b
   | otherwise =  ShortHeaderType
 
 data LongHeaderType = VersionNegotiationType
+                    | ClientInitialType
                     | ServerStatelessRetryType
                     | ServerCleartextType
                     | ClientCleartextType
