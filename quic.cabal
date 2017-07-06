@@ -22,7 +22,9 @@ library
                        network,
                        time,
                        binary,
-                       containers
+                       containers,
+                       tls,
+                       cryptonite
   default-language:    Haskell2010
 
 
