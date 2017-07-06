@@ -36,6 +36,7 @@ import qualified Data.Time.Clock       as Clock
 import           Data.Word             (Word8)
 import qualified Network.QUIC.Internal as I
 import qualified Network.Socket        as S
+import qualified Network.TLS           as TLS
 
 data ManagerSetting = ManagerSetting { managerSettingPort :: Int
                     , managerSettingHost                  :: !String}
