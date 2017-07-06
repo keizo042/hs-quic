@@ -145,20 +145,21 @@ hasKeyPhase :: Word8 -> Bool
 hasKeyPhase w = w .&. 0x20 == 0x20
 
 bitToFrameType :: Word8 -> Maybe FrameType
-bitToFrameType 0x00 = Just PaddingType
-bitToFrameType 0x01 = Just RstStreamType
-bitToFrameType 0x02 = Just ConnectionCloseType
-bitToFrameType 0x03 = Just GoawayType
-bitToFrameType 0x04 = Just MaxDataType
-bitToFrameType 0x05 = Just MaxStreamDataType
-bitToFrameType 0x06 = Just MaxStreamIdType
-bitToFrameType 0x07 = Just PingType
-bitToFrameType 0x08 = Just BlockedType
-bitToFrameType 0x09 = Just StreamBlockedType
-bitToFrameType 0x0a = Just StreamIdNeededType
-bitToFrameType 0x0b = Just NewConnectionType
-bitToFrameType -31 = Just StreamType -- 0xa0 - 0xbf
-bitToFrameType -63  = Just AckType -- 0xc0 - 0xff
+bitToFrameType w = case (w .&. 0x1f) of
+      0x00 -> Just PaddingType
+      0x01 -> Just RstStreamType
+      0x02 -> Just ConnectionCloseType
+      0x03 -> Just GoawayType
+      0x04 -> Just MaxDataType
+      0x05 -> Just MaxStreamDataType
+      0x06 -> Just MaxStreamIdType
+      0x07 -> Just PingType
+      0x08 -> Just BlockedType
+      0x09 -> Just StreamBlockedType
+      0x0a -> Just StreamIdNeededType
+      0x0b -> Just NewConnectionType
+      -31  -> Just StreamType -- 0xa0 - 0xbf
+      -63  -> Just AckType -- 0xc0 - 0xff
 
 type StreamId = Int
 
