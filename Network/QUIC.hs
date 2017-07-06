@@ -210,18 +210,18 @@ decodeHeader :: ByteString -> QUICResult (Header, ByteString)
 decodeHeader bs = undefined
   where
     decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeLongHeader = case (B.runGetOrFail decode' bs) of
-                         Right (rest, _, hdr) -> Right (hdr, rest)
+    decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                         Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
                          Left _               -> undefined
       where
-        decode' :: Get.Get LongHeader
+        decode' :: Get.Get Header
         decode' = undefined
     decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeShortHeader bs = case (B.runGetOrFail decode' bs) of
-                          Right (rest, _, hdr) -> Right (hdr, rest)
+    decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                          Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
                           Left _               -> undefined
       where
-        decode' :: Get.Get LongHeader
+        decode' :: Get.Get Header
         decode' = undefined
 
 
