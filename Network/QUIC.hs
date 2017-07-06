@@ -85,6 +85,16 @@ isHeaderType b
   | (b == 0x80) = LongHeaderType
   | otherwise =  ShortHeaderType
 
+data LongHeaderType = VersionNegotiationType
+                    | ServerStatelessRetryType
+                    | ServerCleartextType
+                    | ClientCleartextType
+                    | ZeroRttProtectedType
+                    | OneRTTProtectedType
+                    | OneRTTProtectedKeyPhaseZeroType
+                    | OneRTTProctectedKeyPhaseOneType
+                    | PublicReset
+                    deriving (Show, Eq)
 
 data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | ClientInitial
