@@ -45,7 +45,7 @@ data ManagerSetting = ManagerSetting { managerSettingPort :: Int
 
 -- Manager API
 -- default ManageSetting configuration paramater
-defaultManagerSetting = ManagerSetting
+defaultManagerSetting = ManagerSetting 4043 "localhost"
 
 -- socket, connection stream, key abstraction.
 data Manager = Manager { mgrConns :: [Int]
