@@ -25,6 +25,7 @@ import           Control.Monad
 import qualified Data.Binary           as B
 import qualified Data.Binary.Get       as Get
 import qualified Data.Binary.Put       as Put
+import           Data.Bits
 import           Data.ByteString       (ByteString)
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Lazy  as LBS
@@ -138,10 +139,10 @@ data FrameType = StreamType Word8
                deriving Show
 
 hasConnectionId :: Word8 -> Bool
-hasConnectionId = undefined
+hasConnectionId w = w .&. 0x40 ==  0x40
 
 hasKeyPhase :: Word8 -> Bool
-hasKeyPhase = undefined
+hasKeyPhase w = w .&. 0x20 == 0x20
 
 bitToFrameType :: Word8 -> Maybe FrameType
 bitToFrameType 0x00 = Just PaddingType
