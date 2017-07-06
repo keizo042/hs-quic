@@ -499,7 +499,7 @@ insertStreamData = undefined
 -- Stream Data Map , Key: Stream Id / Value: (Packet Number, Data)
 -- the data is specific Stream Id Data
 
-type StreamData = M.Map PacketNumber ByteString
+type StreamData = M.Map Offset ByteString
 
 type DataMap = M.Map StreamId StreamData
 
@@ -508,21 +508,21 @@ initDataMap = M.empty
 
 insertDataMap :: DataMap
               -> StreamId
-              -> PacketNumber
+              -> Offset
               -> ByteString
               -> DataMap
-insertDataMap m sid pn bs = modify' sid pn bs sd m
+insertDataMap m sid ofs bs = modify' sid ofs bs sd m
     where
       sd = lookup' sid m
       lookup' ::  StreamId -> DataMap -> (Maybe StreamData)
       lookup' sid' m' = M.lookup sid' m'
 
-      modify' :: StreamId -> PacketNumber -> ByteString -> (Maybe StreamData) -> DataMap -> DataMap
-      modify' sid' pn' bs' sd0 m' = M.insert sid' sd1 m'
+      modify' :: StreamId -> Offset -> ByteString -> (Maybe StreamData) -> DataMap -> DataMap
+      modify' sid' ofs' bs' sd0 m' = M.insert sid' sd1 m'
         where
           sd1 = case sd0 of
-                    (Just sd) ->  M.insert pn' bs' sd
-                    Nothing   ->  M.insert pn' bs' M.empty
+                    (Just sd) ->  M.insert ofs' bs' sd
+                    Nothing   ->  M.insert ofs' bs' M.empty
 
 dropDataMap :: StreamId -> DataMap -> DataMap
 dropDataMap sid m = M.delete sid m
