@@ -22,22 +22,23 @@ module Network.QUIC
   )
   where
 import           Control.Monad
+import qualified Data.Binary           as B
+import qualified Data.Binary.Get       as Get
+import qualified Data.Binary.Put       as Put
 import           Data.ByteString       (ByteString)
 import qualified Data.ByteString       as BS
-import qualified Data.ByteString.Lazy       as LBS
-import qualified Data.Binary as B
+import qualified Data.ByteString.Lazy  as LBS
 import           Data.Int
 import qualified Data.Map.Strict       as M
-import           Data.Maybe
-import           Data.Time.Clock
-import qualified Data.Binary.Get as Get
-import qualified Data.Binary.Put as Put
-import           Data.Word
+import           Data.Maybe            (Maybe)
+import qualified Data.Maybe            as Maybe
+import qualified Data.Time.Clock       as Clock
+import           Data.Word             (Word8)
 import qualified Network.QUIC.Internal as I
 import qualified Network.Socket        as S
 
 data ManagerSetting = ManagerSetting { managerSettingPort :: Int
-                    , managerSettingHost :: !String}
+                    , managerSettingHost                  :: !String}
                     deriving Show
 
 
@@ -198,7 +199,7 @@ decodeFrames :: Header -> ByteString -> QUICResult [Frame]
 decodeFrames hdr bs = case (decodeFrame hdr bs) of
                         Right (f,bs') -> case (decodeFrames hdr bs') of
                                      Right fs -> Right (f : fs)
-                                     Left e -> Left e
+                                     Left e   -> Left e
                         Left e  -> Left e
 
 
@@ -310,7 +311,7 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
 
 
 encodeFrames :: [Frame] -> ByteString
-encodeFrames [] = BS.empty
+encodeFrames []     = BS.empty
 encodeFrames (f:fs) = encodeFrame f `BS.append` encodeFrames fs
 
 encodeFrame :: Frame -> ByteString
@@ -463,10 +464,10 @@ parseTime bs = undefined
     mantissa = undefined
     exponent = undefined
 
-toUTCTime :: QUICTime -> UTCTime
+toUTCTime :: QUICTime -> Clock.UTCTime
 toUTCTime = undefined
 
-fromUTCTime :: UTCTime -> QUICTime
+fromUTCTime :: Clock.UTCTime -> QUICTime
 fromUTCTime = undefined
 
 -- QUIC Version  Negtiaton
