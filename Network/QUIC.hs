@@ -260,12 +260,19 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
                                        _ -> undefined
 
         where
-           sidn :: Int
-           sidn = undefined
-           offn :: Int
-           offn = undefined
+           chkStreamId :: Word8 -> Int
+           chkStreamId = undefined
+
+           chkOffset :: Word8 -> Int
+           chkOffset = undefined
+
+           sn :: Int
+           sn = undefined
+
+           ofn :: Int
+           ofn = undefined
            decode' :: Get.Get Frame
-           decode' = undefined -- Just <$> Stream <*> (getStreamId sidn) <*> (getOffset offn) <*> I.getInt16
+           decode' = undefined -- Just <$> Stream <*> (getStreamId sn) <*> (getOffset ofn) <*> I.getInt16
      decodeAckFrame hdr bit bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> undefined
