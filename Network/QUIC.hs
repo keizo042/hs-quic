@@ -225,10 +225,6 @@ decodeHeader bs = undefined
         decode' :: Get.Get Header
         decode' = undefined
 
-
-
-
-
 encodeHeader :: Header -> ByteString
 encodeHeader hdr = undefined
 
