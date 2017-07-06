@@ -391,16 +391,9 @@ data TransportParameter = TransportParameter {
                         }
                         deriving Show
 
-data TransportParameters = TransportParameters {
-                        -- client hello
-                          transParamNegotiatedVersion  :: Maybe QUICVersion
-                        , transParamsInitialVersion    :: Maybe QUICVersion
-                        -- encrypted extensions
-                        , transParamsSupportedVerisons :: [QUICVersion]
-                        -- default
-                        , transParamsParams            :: [TransportParameter]
-                        }
-                        deriving Show
+data TransportParameters = TransportParametersClientHello QUICVersion QUICVersion [TransportParameter]
+                         | TransportPArametersEncryptedExtensions [QUICVersion] [TransportParameter]
+                         deriving Show
 
 -- entity of transport parameters.
 -- TODO: the config will be replaced hash map structure.
