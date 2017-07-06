@@ -516,6 +516,10 @@ supportedVersions :: [QUICVersion] -> [QUICVersion]
 supportedVersions = undefined
 
 -- Init STREAM
+-- STREAM ID 0
+-- padded 1280 frame.
+
+initStream = undefined
 
 newStreamFrame :: Frame
 newStreamFrame = undefined
