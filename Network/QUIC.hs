@@ -391,7 +391,7 @@ data TransportParameter = TransportParameter {
                         }
                         deriving Show
 
-data TransportParameters = TransportParameterss {
+data TransportParameters = TransportParameters {
                         -- client hello
                           transParamNegotiatedVersion  :: Maybe QUICVersion
                         , transParamsInitialVersion    :: Maybe QUICVersion
