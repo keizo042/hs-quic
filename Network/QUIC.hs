@@ -90,11 +90,11 @@ data LongHeaderType = VersionNegotiationType
                     | ServerStatelessRetryType
                     | ServerCleartextType
                     | ClientCleartextType
-                    | ZeroRttProtectedType
+                    | ZeroRTTProtectedType
                     | OneRTTProtectedType
                     | OneRTTProtectedKeyPhaseZeroType
                     | OneRTTProctectedKeyPhaseOneType
-                    | PublicReset
+                    | PublicResetType
                     deriving (Show, Eq)
 
 data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
