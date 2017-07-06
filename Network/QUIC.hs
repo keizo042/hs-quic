@@ -97,6 +97,19 @@ data LongHeaderType = VersionNegotiationType
                     | PublicResetType
                     deriving (Show, Eq)
 
+bitToLongHeaderType :: Word8 -> Maybe LongHeaderType
+bitToLongHeaderType w
+  | w == 1 = Just VersionNegotiationType
+  | w == 2 = Just ClientInitialType
+  | w == 3 = Just ServerStatelessRetryType
+  | w == 4 = Just ServerCleartextType
+  | w == 5 = Just ClientCleartextType
+  | w == 6 = Just ZeroRTTProtectedType
+  | w == 7 = Just OneRTTProtectedKeyPhaseZeroType
+  | w == 8 = Just OneRTTProctectedKeyPhaseOneType
+  | w == 9 = Just PublicResetType
+  | otherwise = Nothing
+
 data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | ClientInitial
                 | ServerStatelessRetry
