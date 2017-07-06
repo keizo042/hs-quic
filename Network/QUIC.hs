@@ -574,6 +574,19 @@ takeDataMap sid m = case (M.lookup sid m) of
                   f b (k,v) = b `BS.append` v
 
 
+-- send Client Hello with 1RTT
+sendClientHello = undefined
+
+-- recv Client Hello with 1RTT
+recvClinetHello = undefined
+
+sendServerHello = undefined
+
+-- recv Server Hello with 1RTT
+recvServerHello = undefined
+
+-- send 1 RTT Key exchange
+exchange1RTTKey = undefined
 
 --
 -- testing
