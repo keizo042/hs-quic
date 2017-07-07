@@ -158,8 +158,8 @@ bitToFrameType w = case (w .&. 0x1f) of
       0x09 -> Just StreamBlockedType
       0x0a -> Just StreamIdNeededType
       0x0b -> Just NewConnectionType
-      -31  -> Just StreamType -- 0xa0 - 0xbf
-      -63  -> Just AckType -- 0xc0 - 0xff
+      -31  -> Just (StreamType w) -- 0xa0 - 0xbf
+      -63  -> Just (AckType w)-- 0xc0 - 0xff
 
 type StreamId = Int
 
