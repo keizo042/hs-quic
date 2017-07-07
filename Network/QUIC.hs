@@ -128,8 +128,14 @@ data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte
 data OffsetSize = NoExistOffset | Offset2Byte | Offset4Byte | Offset8Byte
                 deriving (Show, Eq)
 
+data LAckSize = LAck1Byte | LAck2Byte | LAck4Byte | LAck8Byte
+                deriving (Show, Eq)
+
+data AckBlockLengthSize = AckBlock1Byte | AckBlock2Byte | AckBlock4Byte | AckBlock8Byte
+                deriving (Show, Eq)
+
 data FrameType = StreamType Bool StreamSize OffsetSize Bool
-               | AckType Word8
+               | AckType Bool LAckSize AckBlockLengthSize
                | MaxDataType
                | MaxStreamDataType
                | MaxStreamIdType
@@ -179,7 +185,17 @@ bitToFrameType w = case (w .&. 0x1f) of
            hasData :: Word8 -> Bool
            hasData = undefined
       -- 0xc0 - 0xff
-      -63  -> Just (AckType w)
+      -63  -> Just (AckType (hasNumBlocksField w) (chkLACKField w) (chkAckBlockLengthField w))
+        where
+          hasNumBlocksField :: Word8 -> Bool
+          hasNumBlocksField = undefined
+
+          chkLACKField :: Word8 -> LAckSize
+          chkLACKField = undefined
+
+          chkAckBlockLengthField :: Word8 -> AckBlockLengthSize
+          chkAckBlockLengthField = undefined
+
 
 
 type StreamId = Int
@@ -263,7 +279,7 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
                        Nothing    -> undefined
                        Just ft  -> case ft of
                          st@(StreamType fin hasSID hasOff d)     -> decodeStreamFrame hdr st bs
-                         (AckType bit)        -> decodeAckFrame hdr bit bs
+                         at@(AckType n lack abl)        -> decodeAckFrame hdr at bs
                          MaxDataType          -> decodeMaxDataFrame hdr bs
                          MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
                          MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
@@ -289,7 +305,7 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
            ofn = undefined
            decode' :: Get.Get Frame
            decode' = undefined -- Just <$> Stream <*> (getStreamId sn) <*> (getOffset ofn) <*> I.getInt16
-     decodeAckFrame hdr bit bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+     decodeAckFrame hdr _ bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> undefined
         where
