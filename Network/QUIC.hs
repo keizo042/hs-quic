@@ -122,7 +122,13 @@ data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | PublicReset
                 deriving (Show, Eq)
 
-data FrameType = StreamType Word8
+data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte
+                deriving (Show, Eq)
+
+data OffsetSize = NoExistOffset | Offset2Byte | Offset4Byte | Offset8Byte
+                deriving (Show, Eq)
+
+data FrameType = StreamType Bool StreamSize OffsetSize Bool
                | AckType Word8
                | MaxDataType
                | MaxStreamDataType
@@ -158,8 +164,23 @@ bitToFrameType w = case (w .&. 0x1f) of
       0x09 -> Just StreamBlockedType
       0x0a -> Just StreamIdNeededType
       0x0b -> Just NewConnectionType
-      -31  -> Just (StreamType w) -- 0xa0 - 0xbf
-      -63  -> Just (AckType w)-- 0xc0 - 0xff
+      -- 0xa0 - 0xbf
+      -31  -> Just (StreamType (hasFin w) (chkStreamId w)  (chkOffset w)  (hasData w))
+        where
+           hasFin :: Word8 -> Bool
+           hasFin = undefined
+
+           chkStreamId :: Word8 -> StreamSize
+           chkStreamId = undefined
+
+           chkOffset :: Word8 -> OffsetSize
+           chkOffset = undefined
+
+           hasData :: Word8 -> Bool
+           hasData = undefined
+      -- 0xc0 - 0xff
+      -63  -> Just (AckType w)
+
 
 type StreamId = Int
 
@@ -241,7 +262,7 @@ decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
 decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
                        Nothing    -> undefined
                        Just ft  -> case ft of
-                         (StreamType bit)     -> decodeStreamFrame hdr bit bs
+                         st@(StreamType fin hasSID hasOff d)     -> decodeStreamFrame hdr st bs
                          (AckType bit)        -> decodeAckFrame hdr bit bs
                          MaxDataType          -> decodeMaxDataFrame hdr bs
                          MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
@@ -254,17 +275,12 @@ decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
                          NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
                          ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
    where
-     decodeStreamFrame :: Header -> Word8 -> ByteString -> QUICResult (Frame, ByteString)
-     decodeStreamFrame  hdr bit bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
+     decodeStreamFrame :: Header -> FrameType -> ByteString -> QUICResult (Frame, ByteString)
+     decodeStreamFrame  hdr _ bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
                                        (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                        _ -> undefined
 
         where
-           chkStreamId :: Word8 -> Int
-           chkStreamId = undefined
-
-           chkOffset :: Word8 -> Int
-           chkOffset = undefined
 
            sn :: Int
            sn = undefined
