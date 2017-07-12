@@ -40,7 +40,7 @@ import qualified Network.Socket        as S
 import qualified Network.TLS           as TLS
 
 data ManagerSetting = ManagerSetting { managerSettingPort :: Int
-                    , managerSettingHost                  :: !String}
+                                     , managerSettingHost :: !String}
                     deriving Show
 
 
