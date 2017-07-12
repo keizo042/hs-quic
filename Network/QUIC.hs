@@ -16,7 +16,7 @@ module Network.QUIC
     TransportParameters(..),
     TransportParameter(..),
 
--- Tesing
+-- Testing
     testDataMap,
     testStreamData
   )
