@@ -90,6 +90,10 @@ toHeaderType b
   | (b == 0x80) = LongHeaderType
   | otherwise =  ShortHeaderType
 
+fromHeaderType :: HeaderType -> Word8
+fromHeaderType LongHeaderType = 0x80
+fromHeaderType ShortHeader    = 0x00
+
 data LongHeaderType = VersionNegotiationType
                     | ClientInitialType
                     | ServerStatelessRetryType
@@ -114,6 +118,17 @@ bitToLongHeaderType w
   | w == 8 = Just OneRTTProctectedKeyPhaseOneType
   | w == 9 = Just PublicResetType
   | otherwise = Nothing
+
+fromLongHeaderType :: LongHeaderType -> Word8
+fromLongHeaderType VersionNegotiation              = 1
+fromLongHeaderType ClientInitialType               = 2
+fromLongHeaderType ServerStatelessRetryType        = 3
+fromLongHeaderType ServerCleartextType             = 4
+fromLongHeaderType ClientCleartextType             = 5
+fromLongHeaderType ZeroRTTProtectedType            = 6
+fromLongHeaderType OneRTTProtectedKeyPhaseZeroType = 7
+fromLongHeaderType OneRTTProctectedKeyPhaseOneType = 8
+fromLongHeaderType PublicResetType                 = 9
 
 data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | ClientInitial
@@ -199,8 +214,6 @@ bitToFrameType w = case (w .&. 0x1f) of
 
           chkAckBlockLengthField :: Word8 -> AckBlockLengthSize
           chkAckBlockLengthField = undefined
-
-
 
 type StreamId = Int
 
