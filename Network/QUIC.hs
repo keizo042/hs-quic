@@ -85,8 +85,8 @@ data Header = LongHeader ConnectionId PacketNumber QUICVersion
 data HeaderType = LongHeaderType | ShortHeaderType
                 deriving (Show, Eq)
 
-isHeaderType :: Word8 -> HeaderType
-isHeaderType b
+toHeaderType :: Word8 -> HeaderType
+toHeaderType b
   | (b == 0x80) = LongHeaderType
   | otherwise =  ShortHeaderType
 
