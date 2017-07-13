@@ -26,7 +26,8 @@ library
                        cereal,
                        containers,
                        tls,
-                       cryptonite
+                       cryptonite,
+                       data-default-class
   default-language:    Haskell2010
 
 
