@@ -91,8 +91,8 @@ toHeaderType b
   | otherwise =  ShortHeaderType
 
 fromHeaderType :: HeaderType -> Word8
-fromHeaderType LongHeaderType = 0x80
-fromHeaderType ShortHeader    = 0x00
+fromHeaderType LongHeaderType  = 0x80
+fromHeaderType ShortHeaderType = 0x00
 
 data LongHeaderType = VersionNegotiationType
                     | ClientInitialType
@@ -120,7 +120,7 @@ bitToLongHeaderType w
   | otherwise = Nothing
 
 fromLongHeaderType :: LongHeaderType -> Word8
-fromLongHeaderType VersionNegotiation              = 1
+fromLongHeaderType VersionNegotiationType          = 1
 fromLongHeaderType ClientInitialType               = 2
 fromLongHeaderType ServerStatelessRetryType        = 3
 fromLongHeaderType ServerCleartextType             = 4
