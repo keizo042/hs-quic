@@ -68,6 +68,9 @@ closeManager mgr = undefined
 withManager :: Manager -> IO a -> IO [Frame]
 withManager = undefined
 
+-- Packet Context, it is indicated by header mainly.
+data Context = Context { ctxPacketNumberSize :: Int }
+             deriving (Show, Eq)
 -- Header
 
 
@@ -604,20 +607,26 @@ takeDataMap sid m = case (M.lookup sid m) of
                   f b (k,v) = b `BS.append` v
 
 
--- send Client Hello with 1RTT
-sendClientHello = undefined
+-- TODO: having our own the handshake procedure is bad practice.
+-- We should carry TLS handshake from Network.TLS (tls package)
+-- but api is nothing in tls package. So we have implementation for now.
+-- it will be replaced.
 
--- recv Client Hello with 1RTT
-recvClinetHello = undefined
+sendHandshake1RTT = undefined
+  where
+  -- send Client Hello with 1RTT
+  sendClientHello = undefined
 
-sendServerHello = undefined
+  -- recv Server Hello with 1RTT
+  recvServerHello = undefined
 
--- recv Server Hello with 1RTT
-recvServerHello = undefined
 
--- send 1 RTT Key exchange
-exchange1RTTKey = undefined
+recvHandshake = undefined
+  where
+  -- recv Client Hello with 1RTT
+  recvClinetHello = undefined
 
+  sendServerHello = undefined
 --
 -- testing
 --
