@@ -93,11 +93,11 @@ data Frame = Stream !StreamId !Offset !(Maybe Int)
            | Blocked
            | StreamBlocked !StreamId
            | StreamIdNeeded
-           | RstStream !StreamId !QUICErrorCode !Offset
+           | RstStream !StreamId !ErrorCode !Offset
            | Padding
            | Ping
            | NewConnectionId !Int !ConnectionId
-           | ConnectionClose !QUICErrorCode !ByteString
+           | ConnectionClose !ErrorCode !ByteString
            | Goaway !StreamId !StreamId
            deriving Show
 
@@ -110,12 +110,70 @@ type QUICVersion = Int32
 data Packet = Packet Header Payload
             deriving Show
 type Payload = [Frame]
-data QUICErrorCode = ADMITTED
-    deriving Show
 
-data QUICError = QUICErrorCode QUICErrorCode
-               | Otherwise Int
+data ErrorCode = ApplicationErrorCode Int
+               | HostLocalErrorCode Int
+               | QUICErrorCode QUICErorr
+               | CrypotograhicError Int
                deriving Show
+
+data QUICError = QUICInternalError
+               | QUICStreamDataAfterTermination
+               | QUICInvalidFrameData
+               | QUICMultipleTerminationOffsets
+               | QUICStreamCancelled
+               | QUICClosedCriticalStream
+               | QUICMissingPayload
+               | QUICInvalidStreamData
+               | QUICUnencryptedStreamData
+               | QUICMaybeCorruptedMemory
+               | QUICInvalidRstStreamData
+               | QUICInvalidConnectionCloseData
+               | QUICInvalidGoawayData
+               | QUICInvalidWindowUpdateData
+               | QUICInvalidBlockedData
+               | QUICInvalidPathCloseData
+               | QUICInvalidAckData
+               | QUICInvalidVersionNegotiationPacket
+               | QUICInvalidPublicReset
+               | QUICDecryptionFailure
+               | QUICEncryptionFailure
+               | QUICPacketTooLarge
+               | QUICPeerGoingAway
+               | QUICInvalidStreamId
+               | QUICInvalidPriority
+               | QUICTooManyOpenStreams
+               | QUICTooManyOpenStreams
+               | QUICTooManyAvailableStreams
+               | QUICPublicReset
+               | QUICInvalidVersion
+               | QUICInvalidHeaderId
+               | QUICInvalidNegotiationValue
+               | QUICDecompressionFailure
+               | QUICNetworkIdleTimeout
+               | QUICHandshakeTimeout
+               | QUICErrorMigratingAddress
+               | QUICErrorMigratingPort
+               | QUICEmptyStreamFrameNoFin
+               | QUICFlowControlRecievedTooMuchData
+               | QUICFlowControlSentTooMuchData
+               | QUICFlowControlInvalidWindow
+               | QUICConnectionIpPooled
+               | QUICTooManyOutstandingSentPackets
+               | QUICTooManyOutstandingRecievedPackets
+               | QUICConnectionCancelled
+               | QUICBadPacketLossRate
+               | QUICPublicResetPostHandshake
+               | QUICTimeoutsWithOpenStreams
+               | QUICTooManyRTOs
+               | QUICEncryptionLevelIncorrect
+               | QUICVersionNegotiationMissmatch
+               | QUICIpAddressChanged
+               | QUICAddressValidationFailure
+               | QUICTooManyFrameGaps
+               | QUICTooManySessionsOnServers
+               | QUICUnkownErrorCode Int
+               deriving (Show, Eq)
 
 type QUICResult a = Either QUICError a
 
