@@ -5,8 +5,237 @@ module Network.QUIC.Codec
   )
   where
 
+import qualified Data.Binary.Get       as Get
+import qualified Data.Binary.Put       as Put
+import           Data.Bits
+import           Data.ByteString       (ByteString)
+import qualified Data.ByteString       as BS
+import qualified Data.ByteString.Lazy  as LBS
+import           Data.Int
+import           Data.Maybe            (Maybe)
+import qualified Data.Maybe            as Maybe
+import           Data.Word             (Word8)
 import           Network.QUIC
+import qualified Network.QUIC.Internal as I
 import           Network.QUIC.Types
+
+decode :: ByteString -> QUICResult Packet
+decode bs = case (decodeHeader bs) of
+              Left e           -> Left e
+              Right (hdr, bs') -> decode' hdr bs'
+    where
+      decode' hdr bs = case (decodeFrames hdr bs) of
+                (Right fs) -> Right (Packet hdr fs)
+                (Left e)   -> Left e
+
+
+encode :: Packet -> ByteString
+encode (Packet hdr fs) = encodeHeader hdr `BS.append` encodeFrames fs
+
+decodeFrames :: Header -> ByteString -> QUICResult [Frame]
+decodeFrames hdr bs = case (decodeFrame hdr bs) of
+                        Right (f,bs') -> case (decodeFrames hdr bs') of
+                                     Right fs -> Right (f : fs)
+                                     Left e   -> Left e
+                        Left e  -> Left e
+
+encodeFrames :: [Frame] -> ByteString
+encodeFrames []     = BS.empty
+encodeFrames (f:fs) = encodeFrame f `BS.append` encodeFrames fs
+
+decodeHeader :: ByteString -> QUICResult (Header, ByteString)
+decodeHeader bs =  case (toHeaderType $ BS.head bs) of
+                     LongHeaderType  -> decodeLongHeader bs
+                     ShortHeaderType -> decodeShortHeader bs
+  where
+    decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
+    decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                         Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
+                         Left _               -> Left QUICInvalidPacketHeader
+      where
+        decode' :: Get.Get Header
+        decode' = undefined
+    decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
+    decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                          Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
+                          Left _               -> Left QUICInvalidPacketHeader
+      where
+        decode' :: Get.Get Header
+        decode' = undefined
+
+
+
+decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
+decodeFrame hdr bs = case (toFrameType $ BS.head bs) of
+                       Nothing    -> undefined
+                       Just ft  -> case ft of
+                         st@(StreamType f ss oo d)  -> decodeStreamFrame hdr f ss oo d bs
+                         at@(AckType n lack abl)    -> decodeAckFrame hdr at bs
+                         MaxDataType          -> decodeMaxDataFrame hdr bs
+                         MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
+                         MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
+                         StreamBlockedType    -> decodeStreamBlockedFrame hdr bs
+                         StreamIdNeededType   -> decodeStreamIdNeededFrame hdr bs
+                         RstStreamType        -> decodeRstStreamFrame hdr bs
+                         PaddingType          -> decodePaddingFrame hdr bs
+                         PingType             -> decodePingFrame hdr bs
+                         NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
+                         ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
+   where
+     decodeStreamFrame :: Header ->
+                          Bool -> -- stream is finished
+                          StreamSize -> -- has stream id field
+                          OffsetSize -> -- has offset field
+                          Bool -> -- has body filed
+                          ByteString -> -- payload body
+                          QUICResult (Frame, ByteString)  -- a frame and rest payload or error code
+     decodeStreamFrame  hdr f ss oo d bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
+                                       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                       _ -> Left QUICInvalidStreamData
+
+        where
+           decode' :: Get.Get Frame
+           decode' = undefined -- Just <$> Stream <*> (getStreamId sn) <*> (getOffset ofn) <*> I.getInt16
+     decodeAckFrame hdr _ bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidAckData
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+     decodeMaxDataFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidAckData
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeMaxStreamDataFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInternalError
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeMaxStreamIdFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInternalError
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeBlockedFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidBlockedData
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeStreamBlockedFrame  hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInternalError
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeStreamIdNeededFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidStreamId
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodeRstStreamFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidRstStreamData
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+     decodePaddingFrame _ bs = Right (Padding, BS.tail bs)
+     decodePingFrame _ bs = Right (Ping, BS.tail bs)
+     decodeNewConnectionIdFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInternalError
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+     decodeConnectionCloseFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidConnectionCloseData
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+     decodeGoawayFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+                                   _ -> Left QUICInvalidGoawayData
+        where
+          decode' :: Get.Get Frame
+          decode' = undefined
+
+
+
+encodeHeader :: Header -> ByteString
+encodeHeader (LongHeader c pktn v) = LBS.toStrict $ Put.runPut $ do
+                                  putConnectionId c
+                                  putPacketNumber c
+                                  putQUICVersion v
+
+encodeHeader (ShortHeader c pktn)   = LBS.toStrict $ Put.runPut $ do
+                                  if Maybe.isJust c
+                                    then putConnectionId $ Maybe.fromJust c
+                                    else return ()
+                                  putPacketNumber pktn
+
+encodeFrame :: Frame -> ByteString
+encodeFrame f = LBS.toStrict  undefined
+  where
+    encodeStramFrame = undefined
+    encodeAckFrame = undefined
+    encodePaddingFrame = undefined
+    encodeGoawayFrame = undefined
+
+
+getPacketNumber :: Get.Get PacketNumber
+getPacketNumber = undefined
+
+putPacketNumber :: PacketNumber -> Put.Put
+putPacketNumber = undefined
+
+getConnectionId :: Get.Get ConnectionId
+getConnectionId = fromIntegral <$> I.getInt64
+
+putConnectionId :: ConnectionId -> Put.Put
+putConnectionId = Put.putWord64be . fromIntegral
+
+getStreamId :: Int -> Get.Get StreamId
+getStreamId 1 = I.getInt8
+getStreamId 2 = I.getInt16
+getStreamId 3 = I.getInt24
+getStreamId 4 = I.getInt32
+
+putStreamId :: StreamId -> Put.Put
+putStreamId sid
+  | (sid < 2^8 ) = Put.putWord8 $ fromIntegral sid
+  | (sid < 2^16) = Put.putInt16be $ fromIntegral sid
+  | (sid < 2^24) = error "not yet implemented in Network.QUIC.Codec"
+  | otherwise = Put.putInt32be $ fromIntegral sid
+
+getOffset :: Int -> Get.Get Offset
+getOffset 0 = return 0
+getOffset 2 = fromIntegral <$> I.getInt16
+getOffset 4 = fromIntegral <$> I.getInt32
+getOffset 8 = fromIntegral <$> I.getInt64
+
+putOffset :: Offset -> Put.Put
+putOffset offset
+  | (offset < 2^16) = Put.putInt16be $ fromIntegral offset
+  | (offset < 2^32) = Put.putInt32be $ fromIntegral offset
+  | otherwise       = Put.putInt64be $ fromIntegral offset
+
+getQUICVersion :: Get.Get QUICVersion
+getQUICVersion = undefined
+putQUICVersion :: QUICVersion ->  Put.Put
+putQUICVersion v = undefined
 
 -- | toHeaderType check Long or Short Header.
 toHeaderType :: Word8 -> HeaderType
@@ -113,8 +342,8 @@ toFrameType w = case (w .&. 0x1f) of
 
 -- | fromFrameType
 fromFrameType :: FrameType -> Word8
-fromFrameType Padding                = 0x00
-fromFrameType RstStream              = 0x01
+fromFrameType PaddingType                = 0x00
+fromFrameType RstStreamType              = 0x01
 fromFrameType ConnectionCloseType    = 0x03
 fromFrameType GoawayType             = 0x04
 fromFrameType MaxDataType            = 0x05
@@ -152,206 +381,3 @@ fromFrameType (AckType n ll mm)      =  0xc0 - 0xff .|. nblock n .|. len ll .|. 
     ablk AckBlock2Byte = 0x01
     ablk AckBlock4Byte = 0x02
     ablk AckBlock8Byte = 0x03
-
-putStreamId :: StreamId -> Put.Put
-putStreamId sid
-  | (sid < 2^8 ) = Put.putWord8 sid
-  | (sid < 2^16) = Put.putInt16be sid
-  | (sid < 2^24) = error "not yet implemented in Network.QUIC.Codec"
-  | otherwise = Put.putInt32be sid
-
-getStreamId :: Int -> Get.Get StreamId
-getStreamId 1 = I.getInt8
-getStreamId 2 = I.getInt16
-getStreamId 3 = I.getInt24
-getStreamId 4 = I.getInt32
-
-getOffset :: Int -> Get.Get Offset
-getOffset 0 = return 0
-getOffset 2 = fromIntegral <$> I.getInt16
-getOffset 4 = fromIntegral <$> I.getInt32
-getOffset 8 = fromIntegral <$> I.getInt64
-
-putOffset :: Offset -> Put.Put
-putOffset offset
-  | (offset < 2^16) = Put.putInt16be offset
-  | (offset < 2^32) = Put.putInt32be offset
-  | otherwise       = Put.putInt64be offset
-
-
-decodeHeader :: ByteString -> QUICResult (Header, ByteString)
-decodeHeader bs =  case (toHeaderType $ LBS.head bs) of
-                     LongHeaderType  -> decodeLongHeader bs
-                     ShortHeaderType -> decodeShortHeader bs
-  where
-    decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                         Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-                         Left _               -> undefined
-      where
-        decode' :: Get.Get Header
-        decode' = undefined
-    decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                          Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-                          Left _               -> undefined
-      where
-        decode' :: Get.Get Header
-        decode' = undefined
-
-encodeHeader :: Header -> ByteString
-encodeHeader hdr = undefined
-
-decodeFrames :: Header -> ByteString -> QUICResult [Frame]
-decodeFrames hdr bs = case (decodeFrame hdr bs) of
-                        Right (f,bs') -> case (decodeFrames hdr bs') of
-                                     Right fs -> Right (f : fs)
-                                     Left e   -> Left e
-                        Left e  -> Left e
-
-
-decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
-decodeFrame hdr bs = case (bitToFrameType $ BS.head bs) of
-                       Nothing    -> undefined
-                       Just ft  -> case ft of
-                         st@(StreamType fin hasSID hasOffset d) ->
-                            decodeStreamFrame fin hasSID hasOffset d st bs
-                         at@(AckType n lack abl)                ->
-                            decodeAckFrame hdr at bs
-                         MaxDataType          -> decodeMaxDataFrame hdr bs
-                         MaxStreamDataType    -> decodeMaxStreamDataFrame hdr bs
-                         MaxStreamIdType      -> decodeMaxStreamIdFrame hdr bs
-                         StreamBlockedType    -> decodeStreamBlockedFrame hdr bs
-                         StreamIdNeededType   -> decodeStreamIdNeededFrame hdr bs
-                         RstStreamType        -> decodeRstStreamFrame hdr bs
-                         PaddingType          -> decodePaddingFrame hdr bs
-                         PingType             -> decodePingFrame hdr bs
-                         NewConnectionType    -> decodeNewConnectionIdFrame hdr bs
-                         ConnectionCloseType  -> decodeConnectionCloseFrame hdr bs
-   where
-     decodeStreamFrame :: Header ->
-                          Bool -> -- stream is finished
-                          Bool -> -- has stream id field
-                          Bool -> -- has offset field
-                          Bool -> -- has body filed
-                          ByteString -> -- payload body
-                          QUICResult (Frame, ByteString)  -- a frame and rest payload or error code
-     decodeStreamFrame  hdr fin hasSID hasOffset hasData bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
-                                       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                       _ -> undefined
-
-        where
-           decode' :: Get.Get Frame
-           decode' = undefined -- Just <$> Stream <*> (getStreamId sn) <*> (getOffset ofn) <*> I.getInt16
-     decodeAckFrame hdr _ bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-     decodeMaxDataFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodeMaxStreamDataFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodeMaxStreamIdFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodeBlockedFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodeStreamBlockedFrame  hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodeStreamIdNeededFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodeRstStreamFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-     decodePaddingFrame _ bs = Right (Padding, BS.tail bs)
-     decodePingFrame _ bs = Right (Ping, BS.tail bs)
-     decodeNewConnectionIdFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-     decodeConnectionCloseFrame hdr bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-     decodeGoawayFrame hdr bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> undefined
-        where
-          decode' :: Get.Get Frame
-          decode' = undefined
-
-
-
-encodeFrames :: [Frame] -> ByteString
-encodeFrames []     = BS.empty
-encodeFrames (f:fs) = encodeFrame f `BS.append` encodeFrames fs
-
-encodeFrame :: Frame -> ByteString
-encodeFrame f = LBS.toStrict  undefined
-  where
-    encodeStramFrame = undefined
-    encodeAckFrame = undefined
-    encodeAck = undefined
-
-decode :: ByteString -> QUICResult Packet
-decode bs = decode' $ decodeHeader bs
-    where
-    decode' (Left e) = Left e
-    decode' (Right (hdr,bs')) = case (decodeFrames hdr bs') of
-              (Right fs) -> Right (Packet hdr fs)
-              (Left e)   -> Left e
-
-
-encode :: Packet -> ByteString
-encode (Packet hdr fs) = encodeHeader hdr `BS.append` encodeFrames fs
-
-getPacketNumber :: Get.Get PacketNumber
-getPacketNumber = undefined
-
-putPacketNumber :: PacketNumber -> Put.Put
-putPacketNumber = undefined
-
-putConnectionId :: ConnectionId -> Put.Put
-putConnectionId = Put.putWord64be . fromIntegral
-
-getConnectionId :: Get.Get ConnectionId
-getConnectionId = fromIntegral <$> I.getInt64

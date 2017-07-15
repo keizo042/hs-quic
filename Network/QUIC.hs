@@ -5,7 +5,6 @@ import           Data.ByteString       (ByteString)
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Lazy  as LBS
 import           Data.Int
-import qualified Data.Map.Strict       as M
 import           Data.Maybe            (Maybe)
 import qualified Data.Maybe            as Maybe
 import qualified Data.Time.Clock       as Clock
