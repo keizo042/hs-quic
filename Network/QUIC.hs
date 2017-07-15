@@ -68,8 +68,6 @@ withManager = undefined
 -- while reconnection or handshake, we should  use long Header format.
 -- otherwise, we must use short Header format.
 
-intToErrorCode :: Int -> ErrorCode
-intToErrorCode _ = undefined
 
 errorCodeToInt :: ErrorCode -> Int
 errorCodeToInt (ApplicationErrorCode i) = i
@@ -77,13 +75,18 @@ errorCodeToInt (HostLocalErrorCode i)   = i
 errorCodeToInt (QUICError err)          = quicErrorToInt err
 errorCodeToInt (CrypotograhicError i)   = i
 
-quicErrorToInt :: QUICError -> Int
-quicErrorToInt i
+intToErrorCode :: Int -> ErrorCode
+intToErrorCode i
  | (0x00000000 <= i && i <= 0x3FFFFFFF) = ApplicationErrorCode i
  | (0x40000000 <= i && i <= 0x7FFFFFFF) = HostLocalErrorCode i
  | (0x80000000 <= i && i <= 0xBFFFFFFF) = QUICErrorCode (intToQUICError i)
  | (0xC0000000 <= i && i <= 0xFFFFFFFF) = CrypotograhicError i
 
+quicErrorToInt :: QUICError -> Int
+quicErrorToInt ApplicationErrorCode i = i
+quicErrorToInt HostLocalErrorCode i   = i
+quicErrorToInt QUICErrorCode e        = quicErrorToInt e
+quicErrorToInt CrypotograhicError i   = i
 
 intToQUICError :: Int -> QUICError
 intToQUICError i = f (i - 0x80000000)
@@ -100,7 +103,6 @@ intToQUICError i = f (i - 0x80000000)
     f 0x2e = QUICInvalidStreamData
     f 0x3d = QUICUnencryptedStreamData
     f 0x59 = QUICMaybeCorruptedMemory
-
     f 0x06 = QUICInvalidRstStreamData
     f 0x07 = QUICInvalidConnectionCloseData
     f 0x08 = QUICInvalidGoawayData
