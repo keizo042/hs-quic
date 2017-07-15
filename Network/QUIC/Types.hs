@@ -11,7 +11,7 @@ import           Data.Int
 import qualified Data.Time.Clock    as Clock
 
 -- Packet Context, it is indicated by header mainly.
-data Context = Context { contextPacketNumberSize :: Int }
+data PacketContext = PacketContext { contextPacketNumberSize :: Int }
              deriving (Show, Eq)
 
 data Header = LongHeader ConnectionId PacketNumber QUICVersion
