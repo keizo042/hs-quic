@@ -68,12 +68,22 @@ withManager = undefined
 -- while reconnection or handshake, we should  use long Header format.
 -- otherwise, we must use short Header format.
 
-quicErrorCodeToInt :: QUICErrorCode -> Int
-quicErrorCodeToInt _ = undefined
+intToErrorCode :: Int -> ErrorCode
+intToErrorCode _ = undefined
+
+errorCodeToInt :: ErrorCode -> Int
+errorCodeToInt (ApplicationErrorCode i) = i
+errorCodeToInt (HostLocalErrorCode i)   = i
+errorCodeToInt (QUICError err)          = quicErrorToInt err
+errorCodeToInt (CrypotograhicError i)   = i
 
 quicErrorToInt :: QUICError -> Int
-quicErrorToInt (QUICErrorCode code) = quicErrorCodeToInt code
-quicErrorToInt (Otherwise i)        = i
+quicErrorToInt i
+ | (0x00000000 <= i && i <= 0x3FFFFFFF) = ApplicationErrorCode i
+ | (0x40000000 <= i && i <= 0x7FFFFFFF) = HostLocalErrorCode i
+ | (0x80000000 <= i && i <= 0xBFFFFFFF) = QUICErrorCode (intToQUICError i)
+ | (0xC0000000 <= i && i <= 0xFFFFFFFF) = CrypotograhicError i
+
 
 intToQUICError :: Int -> QUICError
 intToQUICError = undefined
