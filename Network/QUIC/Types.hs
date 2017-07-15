@@ -113,12 +113,13 @@ type Payload = [Frame]
 
 data ErrorCode = ApplicationErrorCode Int
                | HostLocalErrorCode Int
-               | QUICErrorCode QUICErorr
+               | QUICErrorCode QUICError
                | CrypotograhicError Int
                deriving Show
 
 data QUICError = QUICInternalError
                | QUICStreamDataAfterTermination
+               | QUICInvalidPacketHeader
                | QUICInvalidFrameData
                | QUICMultipleTerminationOffsets
                | QUICStreamCancelled
@@ -142,7 +143,6 @@ data QUICError = QUICInternalError
                | QUICPeerGoingAway
                | QUICInvalidStreamId
                | QUICInvalidPriority
-               | QUICTooManyOpenStreams
                | QUICTooManyOpenStreams
                | QUICTooManyAvailableStreams
                | QUICPublicReset
