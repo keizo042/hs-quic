@@ -1,6 +1,13 @@
 module Network.QUIC.Manager
   where
 
+import           Network.QUIC.Types
+import qualified Network.Socket     as S
+
+data ManagerSetting = ManagerSetting { managerSettingPort :: Int
+                                     , managerSettingHost :: !String}
+                    deriving Show
+
 -- Manager API
 -- default ManageSetting configuration paramater
 defaultManagerSetting = ManagerSetting 4043 "localhost"

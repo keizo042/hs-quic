@@ -17,6 +17,11 @@ library
   exposed-modules:     Network.QUIC
                        Network.QUIC.Types
   other-modules:       Network.QUIC.Internal
+                       Network.QUIC.TLS
+                       Network.QUIC.Time
+                       Network.QUIC.Connection
+                       Network.QUIC.Manager
+                       Network.QUIC.Priority
   build-depends:       base >= 4.7 && < 5,
                        bytestring,
                        async, 

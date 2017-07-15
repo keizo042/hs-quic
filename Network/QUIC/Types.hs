@@ -44,7 +44,7 @@ data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | PublicReset
                 deriving (Show, Eq)
 
-data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte
+data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte
                 deriving (Show, Eq)
 
 data OffsetSize = NoExistOffset | Offset2Byte | Offset4Byte | Offset8Byte
@@ -176,4 +176,12 @@ data QUICError = QUICInternalError
                deriving (Show, Eq)
 
 type QUICResult a = Either QUICError a
+
+data Context = Context { ctxMode    :: Mode
+                       , ctxVersion :: QUICVersion }
+             deriving Show
+
+
+data Mode = Client | Server
+          deriving Show
 

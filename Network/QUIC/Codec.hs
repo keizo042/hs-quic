@@ -36,15 +36,15 @@ toLongHeaderType w
 
 -- | fromLongHeaderType set bit field of Word8.
 fromLongHeaderType :: LongHeaderType -> Word8
-fromLongHeaderType VersionNegotiationType          = 1
-fromLongHeaderType ClientInitialType               = 2
-fromLongHeaderType ServerStatelessRetryType        = 3
-fromLongHeaderType ServerCleartextType             = 4
-fromLongHeaderType ClientCleartextType             = 5
-fromLongHeaderType ZeroRTTProtectedType            = 6
-fromLongHeaderType OneRTTProtectedKeyPhaseZeroType = 7
-fromLongHeaderType OneRTTProctectedKeyPhaseOneType = 8
-fromLongHeaderType PublicResetType                 = 9
+fromLongHeaderType VersionNegotiationType          = 0x01
+fromLongHeaderType ClientInitialType               = 0x02
+fromLongHeaderType ServerStatelessRetryType        = 0x03
+fromLongHeaderType ServerCleartextType             = 0x04
+fromLongHeaderType ClientCleartextType             = 0x05
+fromLongHeaderType ZeroRTTProtectedType            = 0x06
+fromLongHeaderType OneRTTProtectedKeyPhaseZeroType = 0x07
+fromLongHeaderType OneRTTProctectedKeyPhaseOneType = 0x08
+fromLongHeaderType PublicResetType                 = 0x09
 
 -- | hasConnectionId check existing ConnectionId Flag in Header.
 hasConnectionId :: Word8 -> Bool
@@ -73,34 +73,92 @@ toFrameType w = case (w .&. 0x1f) of
       -31  -> Just (StreamType (hasFin w) (chkStreamId w)  (chkOffset w)  (hasData w))
         where
            hasFin :: Word8 -> Bool
-           hasFin = undefined
+           hasFin w = w .&. 0x20 == 0x20
 
            chkStreamId :: Word8 -> StreamSize
-           chkStreamId = undefined
+           chkStreamId w = case (w .&. 0x18) of
+                             0x00 -> Stream1Byte
+                             0x08 -> Stream2Byte
+                             0x10 -> Stream3Byte
+                             0x18 -> Stream4Byte
 
            chkOffset :: Word8 -> OffsetSize
-           chkOffset = undefined
+           chkOffset w = case (w .&. 0x06) of
+                           0x00 -> NoExistOffset
+                           0x02 -> Offset2Byte
+                           0x06 -> Offset4Byte
+                           0x08 -> Offset8Byte
 
            hasData :: Word8 -> Bool
-           hasData = undefined
+           hasData w = w .&. 0x01 == 0x01
       -- 0xc0 - 0xff
       -63  -> Just (AckType (hasNumBlocksField w) (chkLACKField w) (chkAckBlockLengthField w))
         where
           hasNumBlocksField :: Word8 -> Bool
-          hasNumBlocksField = undefined
+          hasNumBlocksField w = w .&. 0x10  == 0x10
 
           chkLACKField :: Word8 -> LAckSize
-          chkLACKField = undefined
+          chkLACKField w = case (w .&. 0xc0) of
+                             0x00 -> LAck1Byte
+                             0x40 -> LAck2Byte
+                             0x80 -> LAck4Byte
+                             0xc0 -> LAck8Byte
 
           chkAckBlockLengthField :: Word8 -> AckBlockLengthSize
-          chkAckBlockLengthField = undefined
+          chkAckBlockLengthField w = case (w .&. 0x03) of
+                                       0x00 -> AckBlock1Byte
+                                       0x01 -> AckBlock2Byte
+                                       0x02 -> AckBlock4Byte
+                                       0x03 -> AckBlock8Byte
 
 -- | fromFrameType
 fromFrameType :: FrameType -> Word8
-fromFrameType = undefined
+fromFrameType Padding                = 0x00
+fromFrameType RstStream              = 0x01
+fromFrameType ConnectionCloseType    = 0x03
+fromFrameType GoawayType             = 0x04
+fromFrameType MaxDataType            = 0x05
+fromFrameType MaxStreamDataType      = 0x06
+fromFrameType MaxStreamIdType        = 0x07
+fromFrameType PingType               = 0x08
+fromFrameType BlockedType            = 0x09
+fromFrameType StreamBlockedType      = 0x0a
+fromFrameType NewConnectionType      = 0x0b
+fromFrameType (StreamType f ss oo d) = 0xa0 - 0xbf .|. fin f .|. stream ss .|. offset oo .|. adata d
+  where
+    fin True  = 0x20
+    fin False =0x00
+    stream Stream1Byte=0x00
+    stream Stream2Byte=0x08
+    stream Stream3Byte=0x10
+    stream Stream4Byte=0x18
+
+    offset NoExistOffset = 0x00
+    offset Offset2Byte   = 0x02
+    offset Offset4Byte   = 0x04
+    offset Offset8Byte   = 0x06
+
+    adata True  = 0x01
+    adata False = 0x00
+fromFrameType (AckType n ll mm)      =  0xc0 - 0xff .|. nblock n .|. len ll .|. ablk mm
+  where
+    nblock True  = 0x10
+    nblock False = 0x00
+    len LAck1Byte = 0x00
+    len LAck2Byte = 0x40
+    len LAck4Byte = 0x80
+    len LAck8Byte = 0xc0
+    ablk AckBlock1Byte = 0x00
+    ablk AckBlock2Byte = 0x01
+    ablk AckBlock4Byte = 0x02
+    ablk AckBlock8Byte = 0x03
 
 putStreamId :: StreamId -> Put.Put
-putStreamId = undefined
+putStreamId sid
+  | (sid < 2^8 ) = Put.putWord8 sid
+  | (sid < 2^16) = Put.putInt16be sid
+  | (sid < 2^24) = error "not yet implemented in Network.QUIC.Codec"
+  | otherwise = Put.putInt32be sid
 
 getStreamId :: Int -> Get.Get StreamId
 getStreamId 1 = I.getInt8
@@ -115,10 +173,16 @@ getOffset 4 = fromIntegral <$> I.getInt32
 getOffset 8 = fromIntegral <$> I.getInt64
 
 putOffset :: Offset -> Put.Put
-putOffset offset = undefined
+putOffset offset
+  | (offset < 2^16) = Put.putInt16be offset
+  | (offset < 2^32) = Put.putInt32be offset
+  | otherwise       = Put.putInt64be offset
+
 
 decodeHeader :: ByteString -> QUICResult (Header, ByteString)
-decodeHeader bs = undefined
+decodeHeader bs =  case (toHeaderType $ LBS.head bs) of
+                     LongHeaderType  -> decodeLongHeader bs
+                     ShortHeaderType -> decodeShortHeader bs
   where
     decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
