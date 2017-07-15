@@ -8,15 +8,19 @@ module Network.QUIC.Codec
 import           Network.QUIC
 import           Network.QUIC.Types
 
+-- | toHeaderType check Long or Short Header.
 toHeaderType :: Word8 -> HeaderType
 toHeaderType b
   | (b == 0x80) = LongHeaderType
   | otherwise =  ShortHeaderType
 
+-- | fromHeaderType set Long/Short header filed of Word8.
 fromHeaderType :: HeaderType -> Word8
 fromHeaderType LongHeaderType  = 0x80
 fromHeaderType ShortHeaderType = 0x00
 
+-- | toLongHeaderType convert LongHeader type.
+-- | if it is invaild, return Nothing.
 toLongHeaderType :: Word8 -> Maybe LongHeaderType
 toLongHeaderType w
   | w == 1 = Just VersionNegotiationType
@@ -30,6 +34,7 @@ toLongHeaderType w
   | w == 9 = Just PublicResetType
   | otherwise = Nothing
 
+-- | fromLongHeaderType set bit field of Word8.
 fromLongHeaderType :: LongHeaderType -> Word8
 fromLongHeaderType VersionNegotiationType          = 1
 fromLongHeaderType ClientInitialType               = 2
@@ -41,12 +46,15 @@ fromLongHeaderType OneRTTProtectedKeyPhaseZeroType = 7
 fromLongHeaderType OneRTTProctectedKeyPhaseOneType = 8
 fromLongHeaderType PublicResetType                 = 9
 
+-- | hasConnectionId check existing ConnectionId Flag in Header.
 hasConnectionId :: Word8 -> Bool
 hasConnectionId w = w .&. 0x40 ==  0x40
 
+-- | hasKeyPhase check existing Key Phase Flag in Header.
 hasKeyPhase :: Word8 -> Bool
 hasKeyPhase w = w .&. 0x20 == 0x20
 
+-- | toFrameType detect short header type in Header.
 toFrameType :: Word8 -> Maybe FrameType
 toFrameType w = case (w .&. 0x1f) of
       0x00 -> Just PaddingType
@@ -87,6 +95,7 @@ toFrameType w = case (w .&. 0x1f) of
           chkAckBlockLengthField :: Word8 -> AckBlockLengthSize
           chkAckBlockLengthField = undefined
 
+-- | fromFrameType
 fromFrameType :: FrameType -> Word8
 fromFrameType = undefined
 
