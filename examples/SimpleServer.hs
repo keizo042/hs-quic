@@ -1,4 +1,8 @@
 module Main where
 
+cfg = undefined
+
 main :: IO ()
-main = undefined
+main = server cfg
+  where
+    server = undefined
