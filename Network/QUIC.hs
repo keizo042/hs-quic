@@ -217,18 +217,6 @@ data EndPoint = EndPoint { endPointMode :: Mode
 data Handle = Idle | Open | RemoteHalfClose | LocalHalfClose | Closed
             deriving Show
 
--- Prioritazation is stream prioritazation abstraction
-data Priority = Priority {}
-                    deriving Show
-
-defaultPrioritazation :: Priority
-defaultPrioritazation = undefined
-
-incrPriority :: Priority
-incrPriority = undefined
-
-decrPriority :: Priority
-decrPriority = undefined
 
 -- QUIC time format
 
