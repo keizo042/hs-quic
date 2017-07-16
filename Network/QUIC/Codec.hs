@@ -56,14 +56,27 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
                          Left _               -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
-        decode' = undefined
+        decode' = do
+          w <- Get.getWord8
+          cid <- getConnectionId
+          pktn <- getPacketNumber
+          v <- getQUICVersion
+          return $ LongHeader (toLongHeaderType w) cid pktn v
     decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                           Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
                           Left _               -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
-        decode' = undefined
+        decode' = do
+          w <- Get.getWord8
+          c <- if hasConn w
+                 then Just <$> getConnectionId
+                 else Nothing
+          cid <- getConnectionId
+          return $ ShortHeader c cid
+          where
+            hasConn = w .|. 0x40 == 0x40
 
 
 
