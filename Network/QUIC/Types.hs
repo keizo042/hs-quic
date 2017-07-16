@@ -14,7 +14,7 @@ import qualified Data.Time.Clock    as Clock
 data PacketContext = PacketContext { contextPacketNumberSize :: Int }
              deriving (Show, Eq)
 
-data Header = LongHeader ConnectionId PacketNumber QUICVersion
+data Header = LongHeader LongHeaderType ConnectionId PacketNumber QUICVersion
             | ShortHeader (Maybe ConnectionId) PacketNumber
             deriving Show
 
@@ -85,7 +85,7 @@ data AckBlock = AckBlock [PacketNumber]
 data AckTimeStamp = AckTimeStamp [QUICTime]
                   deriving Show
 
-data Frame = Stream !StreamId !Offset !(Maybe Int)
+data Frame = Stream !StreamId !Offset !(Maybe Int) !ByteString
            | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
            | MaxData !Int64
            | MaxStreamData !StreamId !Int
@@ -107,7 +107,9 @@ type PacketNumber = Integer
 type ConnectionId = Integer
 
 type QUICVersion = Int32
-data Packet = Packet Header Payload
+
+data Packet = LongPacket Header LongHeaderPacket Payload
+            | ShortPacket Header Payload
             deriving Show
 type Payload = [Frame]
 
