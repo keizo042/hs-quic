@@ -19,6 +19,7 @@ import           Network.QUIC
 import qualified Network.QUIC.Internal as I
 import           Network.QUIC.Types
 
+-- | decode is a API to decode Packet of QUIC.
 decode :: ByteString -> QUICResult Packet
 decode bs = case (decodeHeader bs) of
               Left e           -> Left e
@@ -29,6 +30,7 @@ decode bs = case (decodeHeader bs) of
                 (Left e)   -> Left e
 
 
+-- | encode is a API to encode to Packet of QUIC.
 encode :: Packet -> ByteString
 encode (Packet hdr fs) = encodeHeader hdr `BS.append` encodeFrames fs
 
