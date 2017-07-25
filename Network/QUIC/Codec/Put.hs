@@ -1,18 +1,19 @@
 module Network.QUIC.Codec.Put
   where
 
-import qualified Data.Binary.Put       as Put
+import qualified Data.Binary.Put             as Put
 import           Data.Int
 
-import           Data.ByteString       (ByteString)
-import qualified Data.ByteString       as BS
-import qualified Data.ByteString.Lazy  as LBS
+import           Data.ByteString             (ByteString)
+import qualified Data.ByteString             as BS
+import qualified Data.ByteString.Lazy        as LBS
 
-import qualified Network.QUIC.Internal as I
+import           Network.QUIC.Codec.Internal
+import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 
 putPacketNumber :: PacketNumber -> Put.Put
-putPacketNumber = undefined
+putPacketNumber =  Put.putInt64be . fromIntegral
 
 putConnectionId :: ConnectionId -> Put.Put
 putConnectionId = Put.putWord64be . fromIntegral
@@ -32,3 +33,6 @@ putOffset offset
 
 putQUICVersion :: QUICVersion ->  Put.Put
 putQUICVersion v = undefined
+
+putLongHeaderType :: LongHeaderType -> Put.Put
+putLongHeaderType t = Put.putWord8  (fromLongHeaderType t)

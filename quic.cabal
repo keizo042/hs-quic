@@ -19,6 +19,7 @@ library
   other-modules:       Network.QUIC.Internal
                        Network.QUIC.TLS
                        Network.QUIC.Codec
+                       Network.QUIC.Codec.Internal
                        Network.QUIC.Codec.Put
                        Network.QUIC.Codec.Get
                        Network.QUIC.Time
