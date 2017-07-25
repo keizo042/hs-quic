@@ -11,9 +11,8 @@ import           Data.Int
 import qualified Data.Time.Clock    as Clock
 
 -- | Packet Context, it is indicated by header mainly.
-data PacketContext = PacketContext { contextPacketNumberSize :: Int
-                                   , contextStreamSize       :: StreamSize
-                                   , contextOffsetSize       :: OffsetSize}
+data PacketContext = PacketContext { contextStreamSize :: StreamSize
+                                   , contextOffsetSize :: OffsetSize}
              deriving (Show, Eq)
 
 data Header = LongHeader LongHeaderType ConnectionId PacketNumber QUICVersion
@@ -120,8 +119,8 @@ data Frame = Stream !StreamId !Offset !ByteString
            | RstStream !StreamId !ErrorCode !Offset
            | Padding
            | Ping
-           | NewConnectionId !Int !ConnectionId
-           | ConnectionClose !ErrorCode !ByteString
+           | NewConnectionId !Int !ConnectionId -- Sequence ConnectionId
+           | ConnectionClose !ErrorCode !ByteString -- ErrorCode ErrorMessage
            | Goaway !StreamId !StreamId
            deriving Show
 
@@ -137,8 +136,10 @@ type QUICVersion = Int32
 data Packet = LongPacket Header LongHeaderPayload
             | ShortPacket Header Payload
             deriving Show
+
 type Payload = [Frame]
 
+-- | ErrorCode is exported error code api.
 -- TODO: check it is good?
 data ErrorCode = ApplicationErrorCode Int
                | HostLocalErrorCode Int
@@ -146,6 +147,7 @@ data ErrorCode = ApplicationErrorCode Int
                | CrypotograhicError Int
                deriving Show
 
+-- | QUIC Error Code
 data QUICError = QUICInternalError
                | QUICStreamDataAfterTermination
                | QUICInvalidPacketHeader
@@ -204,17 +206,17 @@ data QUICError = QUICInternalError
                | QUICUnkownErrorCode Int
                deriving (Show, Eq)
 
--- TODO: error code decoder
-getErrorCode :: Get.Get ErrorCode
-getErrorCode = undefined
 
+
+-- | QUICResult is result type in the QUIC protocol context.
 type QUICResult a = Either QUICError a
 
+-- | Context is type that indicates the library main info context.
 data Context = Context { ctxMode    :: Mode
                        , ctxVersion :: QUICVersion }
              deriving Show
 
-
+-- | the context is client or server.
 data Mode = Client | Server
           deriving Show
 

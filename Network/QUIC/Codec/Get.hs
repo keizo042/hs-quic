@@ -34,3 +34,7 @@ getConnectionId = fromIntegral <$> I.getInt64
 
 getPacketNumber :: Get.Get PacketNumber
 getPacketNumber = undefined
+
+-- | getErrorCode
+getErrorCode :: Get.Get ErrorCode
+getErrorCode = I.getInt32 >>= (intToErrorCode . fromIntegral)

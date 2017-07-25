@@ -259,7 +259,7 @@ encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
 
 
 encodeLongHeaderPayload :: LongHeaderPayload -> ByteString
-encodeLongHeaderPayload (VersionNegotiation v vs)   = undefined
+encodeLongHeaderPayload (VersionNegotiation v vs)   = LBS.toStrict $ Put.runPut $ putQUICVersion v >> mapM_ putQUICVersion vs
 encodeLongHeaderPayload ClientInitial               = undefined
 encodeLongHeaderPayload ServerCleartext             = undefined
 encodeLongHeaderPayload ServerStatelessRetry        = undefined

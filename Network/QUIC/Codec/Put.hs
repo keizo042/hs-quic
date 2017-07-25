@@ -36,3 +36,7 @@ putQUICVersion v = undefined
 
 putLongHeaderType :: LongHeaderType -> Put.Put
 putLongHeaderType t = Put.putWord8  (fromLongHeaderType t)
+
+-- | putErrorCode
+putErrorCode :: ErrorCode -> Put.Put
+putErrorCode e = Put.putInt32be <$> errorCodeToInt e
