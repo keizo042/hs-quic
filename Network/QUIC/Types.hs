@@ -179,6 +179,7 @@ data QUICError = QUICInternalError
                | QUICUnkownErrorCode Int
                deriving (Show, Eq)
 
+-- TODO: error code decoder
 getErrorCode :: Get.Get ErrorCode
 getErrorCode = undefined
 
