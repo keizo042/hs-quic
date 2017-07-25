@@ -103,10 +103,9 @@ lowerLimitMaxPacketSize :: Int -> Bool
 lowerLimitMaxPacketSize i = i > 1252
 
 -- the number that library support protocol version.
-supportedVersion :: [Int32]
-supportedVersion = [0x0d,
-                    0x0e
-                   ]
+supportedVersions :: [QUICVersion]
+supportedVersions = undefined
+--    [0x0d, 0x0e ]
 
 -- latest number that the libary support
 defaultVersion :: Int32
@@ -114,17 +113,8 @@ defaultVersion = 0x0e
 
 -- QUIC Version  Negtiaton
 
-isVaildVersion :: QUICVersion -> Bool
-isVaildVersion = undefined
-
 isSupportedversion :: QUICVersion -> Bool
-isSupportedversion = undefined
-
-supportedVersions :: [QUICVersion] -> [QUICVersion]
-supportedVersions = undefined
-
-waitData :: StreamId -> ByteString
-waitData = undefined
+isSupportedversion e = e `elem` supportedVersions
 
 -- testing
 testDataMap = undefined

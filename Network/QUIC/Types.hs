@@ -11,7 +11,9 @@ import           Data.Int
 import qualified Data.Time.Clock    as Clock
 
 -- Packet Context, it is indicated by header mainly.
-data PacketContext = PacketContext { contextPacketNumberSize :: Int }
+data PacketContext = PacketContext { contextPacketNumberSize :: Int
+                                   , contextStreamSize       :: StreamSize
+                                   , contextOffsetSize       :: OffsetSize}
              deriving (Show, Eq)
 
 data Header = LongHeader LongHeaderType ConnectionId PacketNumber QUICVersion
@@ -82,10 +84,10 @@ data QUICTime = QUICTime
 data AckBlock = AckBlock [PacketNumber]
               deriving Show
 
-data AckTimeStamp = AckTimeStamp [QUICTime]
+data AckTimeStamp = AckTimeStamp [(Int, QUICTime)]
                   deriving Show
 
-data Frame = Stream !StreamId !Offset !(Maybe Int) !ByteString
+data Frame = Stream !StreamId !Offset !ByteString
            | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
            | MaxData !Int64
            | MaxStreamData !StreamId !Int
@@ -176,6 +178,9 @@ data QUICError = QUICInternalError
                | QUICTooManySessionsOnServers
                | QUICUnkownErrorCode Int
                deriving (Show, Eq)
+
+getErrorCode :: Get.Get ErrorCode
+getErrorCode = undefined
 
 type QUICResult a = Either QUICError a
 
