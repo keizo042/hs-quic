@@ -31,17 +31,14 @@ decode bs = case (decodeHeader bs) of
               Left e           -> Left e
               Right (hdr, bs') -> case hdr of
                   (ShortHeader _ _)    -> decodeWithShort hdr bs'
-                  (LongHeader _ _ _ _) -> case (decodeLongHeaderPacket bs') of
-                        (Right (pkt, bs'')) -> decodeWithLong hdr pkt bs''
-                        (Left e)            -> Left e
+                  (LongHeader _ _ _ _) -> case (decodeLongHeaderPayload bs') of
+                        (Right (payload, bs'')) -> Right $ LongPacket hdr payload
+                        (Left e)                -> Left e
     where
       decodeWithShort hdr bs = case (decodeFrames hdr bs) of
           (Right fs) -> Right (ShortPacket hdr fs)
           (Left e)   -> Left e
 
-      decodeWithLong hdr pkt bs = case (decodeFrames hdr bs) of
-          (Right fs) -> Right (LongPacket  hdr pkt fs)
-          (Left e)   -> Left e
 
 decodeFrames :: Header -> ByteString -> QUICResult [Frame]
 decodeFrames hdr bs = case (decodeFrame hdr bs) of
@@ -85,8 +82,8 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
           where
             hasConn w = w .|. 0x40 == 0x40
 
-decodeLongHeaderPacket :: ByteString -> QUICResult (LongHeaderPacket, ByteString)
-decodeLongHeaderPacket bs = undefined
+decodeLongHeaderPayload :: ByteString -> QUICResult (LongHeaderPayload, ByteString)
+decodeLongHeaderPayload bs = undefined
 
 decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
 decodeFrame hdr bss = case (toFrameType b) of
@@ -244,9 +241,8 @@ decodeFrame hdr bss = case (toFrameType b) of
 
 -- | encode is a API to encode to Packet of QUIC.
 encode :: Packet -> ByteString
-encode (LongPacket hdr lp payload)       = encodeHeader hdr `BS.append`
-                                           encodeLongHeaderPacket lp `BS.append`
-                                           encodeFrames ctx payload
+encode (LongPacket hdr payload)       = encodeHeader hdr `BS.append`
+                                           encodeLongHeaderPayload payload
                                            where
                                              ctx :: PacketContext
                                              ctx = undefined
@@ -262,15 +258,15 @@ encodeFrames _ []       = BS.empty
 encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
 
 
-encodeLongHeaderPacket :: LongHeaderPacket -> ByteString
-encodeLongHeaderPacket (VersionNegotiation v vs)   = undefined
-encodeLongHeaderPacket ClientInitial               = undefined
-encodeLongHeaderPacket ServerCleartext             = undefined
-encodeLongHeaderPacket ServerStatelessRetry        = undefined
-encodeLongHeaderPacket ClientCleartext             = undefined
-encodeLongHeaderPacket ZeroRTTProtected            = undefined
-encodeLongHeaderPacket OneRTTProtectedKeyPhaseZero = undefined
-encodeLongHeaderPacket OneRTTProtectedKeyPhaseOne  = undefined
+encodeLongHeaderPayload :: LongHeaderPayload -> ByteString
+encodeLongHeaderPayload (VersionNegotiation v vs)   = undefined
+encodeLongHeaderPayload ClientInitial               = undefined
+encodeLongHeaderPayload ServerCleartext             = undefined
+encodeLongHeaderPayload ServerStatelessRetry        = undefined
+encodeLongHeaderPayload ClientCleartext             = undefined
+encodeLongHeaderPayload ZeroRTTProtected            = undefined
+encodeLongHeaderPayload OneRTTProtectedKeyPhaseZero = undefined
+encodeLongHeaderPayload OneRTTProtectedKeyPhaseOne  = undefined
 
 
 
