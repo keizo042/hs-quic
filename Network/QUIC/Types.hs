@@ -10,7 +10,7 @@ import           Data.Default.Class
 import           Data.Int
 import qualified Data.Time.Clock    as Clock
 
--- Packet Context, it is indicated by header mainly.
+-- | Packet Context, it is indicated by header mainly.
 data PacketContext = PacketContext { contextPacketNumberSize :: Int
                                    , contextStreamSize       :: StreamSize
                                    , contextOffsetSize       :: OffsetSize}
@@ -46,18 +46,23 @@ data LongHeaderPacket = VersionNegotiation  QUICVersion [QUICVersion]
                 | PublicReset
                 deriving (Show, Eq)
 
+-- | Internal use
 data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte
                 deriving (Show, Eq)
 
+-- | Internal use
 data OffsetSize = NoExistOffset | Offset2Byte | Offset4Byte | Offset8Byte
                 deriving (Show, Eq)
 
+-- | Internal use
 data LAckSize = LAck1Byte | LAck2Byte | LAck4Byte | LAck8Byte
                 deriving (Show, Eq)
 
+-- | Internal use
 data AckBlockLengthSize = AckBlock1Byte | AckBlock2Byte | AckBlock4Byte | AckBlock8Byte
                 deriving (Show, Eq)
 
+-- | FrameType is for internal use.
 data FrameType = StreamType Bool StreamSize OffsetSize Bool
                | AckType Bool LAckSize AckBlockLengthSize
                | MaxDataType
@@ -74,19 +79,36 @@ data FrameType = StreamType Bool StreamSize OffsetSize Bool
                | GoawayType
                deriving Show
 
+-- | StreamId is type that indicate identify in stream.
 type StreamId = Int
 
+-- | Offset is type that indicate offset from Head of Data in Stream Frame
 type Offset = Integer
 
-data QUICTime = QUICTime
+-- | QUICTime
+-- TODO: See [draft-ietf-quic-transport-04] Section 8.2.2.1 "Time Format"
+-- We Must implement IEEE74 like time format and the utility.
+-- 16bit unsinged float.
+-- mantissa 11 bit
+-- exponent 5 bit
+-- time in microseconds
+data QUICTime = QUICTime Int16 -- QUICTime Int Int
              deriving Show
 
+-- | AckBlock is Blocks that is recived  in Ack Frame.
 data AckBlock = AckBlock [PacketNumber]
               deriving Show
 
-data AckTimeStamp = AckTimeStamp [(Int, QUICTime)]
+-- | Gap is that gap between previous lost packet and latest one in Ack
+-- Frame.
+type Gap = Int
+
+-- | AckTimeStamp is TimeStamp represent in Ack Frame.
+data AckTimeStamp = AckTimeStamp [(Gap, QUICTime)]
                   deriving Show
 
+-- | Frame
+-- TODO: note commnets.
 data Frame = Stream !StreamId !Offset !ByteString
            | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
            | MaxData !Int64
@@ -110,11 +132,14 @@ type ConnectionId = Integer
 
 type QUICVersion = Int32
 
+-- TODO: on LongPacket, Payload filed is not suitable. it will be removed.
+-- LongHeaderPacket should include the payload and LongHeaderPacket is renamed to good one.
 data Packet = LongPacket Header LongHeaderPacket Payload
             | ShortPacket Header Payload
             deriving Show
 type Payload = [Frame]
 
+-- TODO: check it is good?
 data ErrorCode = ApplicationErrorCode Int
                | HostLocalErrorCode Int
                | QUICErrorCode QUICError

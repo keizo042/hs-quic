@@ -30,30 +30,18 @@ decode :: ByteString -> QUICResult Packet
 decode bs = case (decodeHeader bs) of
               Left e           -> Left e
               Right (hdr, bs') -> case hdr of
-                                    (ShortHeader _ _)    -> decodeWithShort hdr bs'
-                                    (LongHeader _ _ _ _) -> case (decodeLongHeaderPacket bs') of
-                                                              (Right (pkt, bs'')) -> decodeWithLong hdr pkt bs''
-                                                              (Left e) -> Left e
+                  (ShortHeader _ _)    -> decodeWithShort hdr bs'
+                  (LongHeader _ _ _ _) -> case (decodeLongHeaderPacket bs') of
+                        (Right (pkt, bs'')) -> decodeWithLong hdr pkt bs''
+                        (Left e)            -> Left e
     where
       decodeWithShort hdr bs = case (decodeFrames hdr bs) of
-                (Right fs) -> Right (ShortPacket hdr fs)
-                (Left e)   -> Left e
+          (Right fs) -> Right (ShortPacket hdr fs)
+          (Left e)   -> Left e
+
       decodeWithLong hdr pkt bs = case (decodeFrames hdr bs) of
-                                (Right fs) -> Right (LongPacket  hdr pkt fs)
-                                (Left e)   -> Left e
-
-
--- | encode is a API to encode to Packet of QUIC.
-encode :: Packet -> ByteString
-encode (LongPacket hdr lp payload)       = encodeHeader hdr `BS.append`
-                                           encodeLongHeaderPacket lp `BS.append`
-                                           encodeFrames ctx payload
-                                           where
-                                             ctx = undefined
-encode (ShortPacket hdr payload)         = encodeHeader hdr `BS.append`
-                                           encodeFrames ctx payload
-                                           where
-                                             ctx = undefined
+          (Right fs) -> Right (LongPacket  hdr pkt fs)
+          (Left e)   -> Left e
 
 decodeFrames :: Header -> ByteString -> QUICResult [Frame]
 decodeFrames hdr bs = case (decodeFrame hdr bs) of
@@ -62,9 +50,7 @@ decodeFrames hdr bs = case (decodeFrame hdr bs) of
                                      Left e   -> Left e
                         Left e  -> Left e
 
-encodeFrames :: PacketContext -> [Frame] -> ByteString
-encodeFrames _ []       = BS.empty
-encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
+
 
 decodeHeader :: ByteString -> QUICResult (Header, ByteString)
 decodeHeader bs =  case (toHeaderType $ BS.head bs) of
@@ -83,34 +69,28 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
           pktn <- getPacketNumber
           v <- getQUICVersion
           case (toLongHeaderType w) of
-            Nothing  -> error "must return invalid header type digit"
+            Nothing  -> error "must return invalid header type digit" -- TODO: See error function
             (Just t) -> return $ LongHeader t cid pktn v
     decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                          Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-                          Left _               -> Left QUICInvalidPacketHeader
+        Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
+        Left _               -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
         decode' = do
           w <- Get.getWord8
-          c <- if hasConn w
-                 then Just <$> getConnectionId
-                 else return Nothing
+          c <- if hasConn w then Just <$> getConnectionId else return Nothing
           cid <- getConnectionId
           return $ ShortHeader c cid
           where
             hasConn w = w .|. 0x40 == 0x40
-
-encodeLongHeaderPacket :: LongHeaderPacket -> ByteString
-encodeLongHeaderPacket p = undefined
-
 
 decodeLongHeaderPacket :: ByteString -> QUICResult (LongHeaderPacket, ByteString)
 decodeLongHeaderPacket bs = undefined
 
 decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
 decodeFrame hdr bss = case (toFrameType b) of
-                       Nothing    -> undefined
+                       Nothing    -> Left QUICInvalidFrameData
                        Just ft  -> case ft of
 
                          MaxDataType          -> decodeMaxDataFrame bs
@@ -130,13 +110,14 @@ decodeFrame hdr bss = case (toFrameType b) of
                          (AckType n lack abl)    -> decodeAckFrame hdr n lack abl bs
    where
      (b, bs) = (BS.head bss, BS.tail bss)
+     -- TODO: desgin what packet context reuqire
      ctx = error "consider how we build packet context"
 
      decodeStreamFrame :: Header ->
-                          Bool -> -- stream is finished
+                          Bool ->       -- stream is finished
                           StreamSize -> -- has stream id field
                           OffsetSize -> -- has offset field
-                          Bool -> -- has body filed
+                          Bool ->       -- has body filed
                           ByteString -> -- payload body
                           QUICResult (Frame, ByteString)  -- a frame and rest payload or error code
      decodeStreamFrame  hdr f ss oo d bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
@@ -150,7 +131,7 @@ decodeFrame hdr bss = case (toFrameType b) of
            getStreamData :: Int -> Get.Get ByteString
            getStreamData n = if f
                              then return BS.empty
-                             else LBS.toStrict <$> (Get.getLazyByteString $ fromIntegral n)
+                             else Get.getByteString $ fromIntegral n
            len = if d then I.getInt16 else return 0
 
      decodeAckFrame hdr n lack abl bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
@@ -261,6 +242,39 @@ decodeFrame hdr bss = case (toFrameType b) of
 
 
 
+-- | encode is a API to encode to Packet of QUIC.
+encode :: Packet -> ByteString
+encode (LongPacket hdr lp payload)       = encodeHeader hdr `BS.append`
+                                           encodeLongHeaderPacket lp `BS.append`
+                                           encodeFrames ctx payload
+                                           where
+                                             ctx :: PacketContext
+                                             ctx = undefined
+encode (ShortPacket hdr payload)         = encodeHeader hdr `BS.append`
+                                           encodeFrames ctx payload
+                                           where
+                                             ctx :: PacketContext
+                                             ctx = undefined
+
+
+encodeFrames :: PacketContext -> [Frame] -> ByteString
+encodeFrames _ []       = BS.empty
+encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
+
+
+encodeLongHeaderPacket :: LongHeaderPacket -> ByteString
+encodeLongHeaderPacket (VersionNegotiation v vs)   = undefined
+encodeLongHeaderPacket ClientInitial               = undefined
+encodeLongHeaderPacket ServerCleartext             = undefined
+encodeLongHeaderPacket ServerStatelessRetry        = undefined
+encodeLongHeaderPacket ClientCleartext             = undefined
+encodeLongHeaderPacket ZeroRTTProtected            = undefined
+encodeLongHeaderPacket OneRTTProtectedKeyPhaseZero = undefined
+encodeLongHeaderPacket OneRTTProtectedKeyPhaseOne  = undefined
+
+
+
+
 encodeHeader :: Header -> ByteString
 encodeHeader (LongHeader typ c pn v) = LBS.toStrict $ Put.runPut $ do
                                   putLongHeaderType typ
@@ -278,6 +292,8 @@ encodeFrame :: PacketContext -> Frame -> ByteString
 encodeFrame ctx f =  case f of
                                   (Stream s o bs)    -> encodeStreamFrame s o bs
                                   (Ack mi i pktn t0 t1 ablk stamps) -> undefined
+                                  -- TODO: implement other encoder for
+                                  -- frame
                                   _                           -> undefined
   where
     encodeStreamFrame s o bs = LBS.toStrict . Put.runPut $ putStreamId s >> putOffset o >> p (BS.length bs)  >> Put.putByteString bs
@@ -291,14 +307,3 @@ encodeFrame ctx f =  case f of
     encoeMaxData        = undefined
     encodeMaxStreamData = undefined
     encodeMaxStreamId   = undefined
-
-
-
--- | hasConnectionId check existing ConnectionId Flag in Header.
-hasConnectionId :: Word8 -> Bool
-hasConnectionId w = w .&. 0x40 ==  0x40
-
--- | hasKeyPhase check existing Key Phase Flag in Header.
-hasKeyPhase :: Word8 -> Bool
-hasKeyPhase w = w .&. 0x20 == 0x20
-

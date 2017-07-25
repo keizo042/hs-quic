@@ -7,6 +7,12 @@ import           Network.QUIC.Types
 import           Data.Bits
 import           Data.Word
 
+--
+-- the Internal package is codec bit checkers.
+-- and convert from/to type/word8.
+--
+--
+
 -- | toHeaderType check Long or Short Header.
 toHeaderType :: Word8 -> HeaderType
 toHeaderType b
@@ -82,7 +88,7 @@ toFrameType w = case (w .&. 0x1f) of
 
            hasData :: Word8 -> Bool
            hasData w = w .&. 0x01 == 0x01
-      -- 0xc0 - 0xff
+      -- draft indicate 0xc0 - 0xff is Ack Frame.
       -63  -> Just (AckType (hasNumBlocksField w) (chkLACKField w) (chkAckBlockLengthField w))
         where
           hasNumBlocksField :: Word8 -> Bool
@@ -115,14 +121,19 @@ fromFrameType PingType               = 0x08
 fromFrameType BlockedType            = 0x09
 fromFrameType StreamBlockedType      = 0x0a
 fromFrameType NewConnectionType      = 0x0b
-fromFrameType (StreamType f ss oo d) = 0xa0 - 0xbf .|. fin f .|. stream ss .|. offset oo .|. adata d
+fromFrameType (StreamType f ss oo d) = 0xa0 - 0xbf
+                                    .|. fin f
+                                    .|. stream ss
+                                    .|. offset oo
+                                    .|. adata d
   where
     fin True  = 0x20
-    fin False =0x00
-    stream Stream1Byte=0x00
-    stream Stream2Byte=0x08
-    stream Stream3Byte=0x10
-    stream Stream4Byte=0x18
+    fin False = 0x00
+
+    stream Stream1Byte =0x00
+    stream Stream2Byte =0x08
+    stream Stream3Byte =0x10
+    stream Stream4Byte =0x18
 
     offset NoExistOffset = 0x00
     offset Offset2Byte   = 0x02
@@ -131,15 +142,29 @@ fromFrameType (StreamType f ss oo d) = 0xa0 - 0xbf .|. fin f .|. stream ss .|. o
 
     adata True  = 0x01
     adata False = 0x00
-fromFrameType (AckType n ll mm)      =  0xc0 - 0xff .|. nblock n .|. len ll .|. ablk mm
+fromFrameType (AckType n ll mm) =  0xc0 - 0xff
+                              .|. nblock n
+                              .|. len ll
+                              .|. ablk mm
   where
     nblock True  = 0x10
     nblock False = 0x00
+
     len LAck1Byte = 0x00
     len LAck2Byte = 0x40
     len LAck4Byte = 0x80
     len LAck8Byte = 0xc0
+
     ablk AckBlock1Byte = 0x00
     ablk AckBlock2Byte = 0x01
     ablk AckBlock4Byte = 0x02
     ablk AckBlock8Byte = 0x03
+
+-- | hasConnectionId check existing ConnectionId Flag in Header.
+hasConnectionId :: Word8 -> Bool
+hasConnectionId w = w .&. 0x40 ==  0x40
+
+-- | hasKeyPhase check existing Key Phase Flag in Header.
+hasKeyPhase :: Word8 -> Bool
+hasKeyPhase w = w .&. 0x20 == 0x20
+
