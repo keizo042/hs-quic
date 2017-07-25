@@ -39,4 +39,4 @@ putLongHeaderType t = Put.putWord8  (fromLongHeaderType t)
 
 -- | putErrorCode
 putErrorCode :: ErrorCode -> Put.Put
-putErrorCode e = Put.putInt32be <$> errorCodeToInt e
+putErrorCode e = Put.putInt32be . fromIntegral $ errorCodeToInt e

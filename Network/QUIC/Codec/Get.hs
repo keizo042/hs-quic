@@ -1,14 +1,15 @@
 module Network.QUIC.Codec.Get
   where
-import qualified Data.Binary.Get       as Get
+import qualified Data.Binary.Get             as Get
 
-import           Data.ByteString       (ByteString)
-import qualified Data.ByteString       as BS
-import qualified Data.ByteString.Lazy  as LBS
+import           Data.ByteString             (ByteString)
+import qualified Data.ByteString             as BS
+import qualified Data.ByteString.Lazy        as LBS
 
 import           Data.Int
 
-import qualified Network.QUIC.Internal as I
+import           Network.QUIC.Codec.Internal
+import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 
 getTimeStamp :: Get.Get AckTimeStamp
@@ -37,4 +38,4 @@ getPacketNumber = undefined
 
 -- | getErrorCode
 getErrorCode :: Get.Get ErrorCode
-getErrorCode = I.getInt32 >>= (intToErrorCode . fromIntegral)
+getErrorCode = intToErrorCode . fromIntegral <$> I.getInt32
