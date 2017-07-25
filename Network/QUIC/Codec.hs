@@ -5,18 +5,23 @@ module Network.QUIC.Codec
   )
   where
 
-import qualified Data.Binary.Get       as Get
-import qualified Data.Binary.Put       as Put
+import qualified Data.Binary.Get        as Get
+import qualified Data.Binary.Put        as Put
+import           Network.QUIC.Codec.Get
+import           Network.QUIC.Codec.Put
+
+import           Data.ByteString        (ByteString)
+import qualified Data.ByteString        as BS
+import qualified Data.ByteString.Lazy   as LBS
+
 import           Data.Bits
-import           Data.ByteString       (ByteString)
-import qualified Data.ByteString       as BS
-import qualified Data.ByteString.Lazy  as LBS
 import           Data.Int
-import           Data.Maybe            (Maybe)
-import qualified Data.Maybe            as Maybe
-import           Data.Word             (Word8)
+import           Data.Maybe             (Maybe)
+import qualified Data.Maybe             as Maybe
+import           Data.Word              (Word8)
+
 import           Network.QUIC
-import qualified Network.QUIC.Internal as I
+import qualified Network.QUIC.Internal  as I
 import           Network.QUIC.Types
 
 -- | decode is a API to decode Packet of QUIC.
@@ -288,52 +293,6 @@ encodeFrame ctx f =  case f of
     encodeMaxStreamData = undefined
     encodeMaxStreamId   = undefined
 
-
-getPacketNumber :: Get.Get PacketNumber
-getPacketNumber = undefined
-
-putPacketNumber :: PacketNumber -> Put.Put
-putPacketNumber = undefined
-
-getConnectionId :: Get.Get ConnectionId
-getConnectionId = fromIntegral <$> I.getInt64
-
-putConnectionId :: ConnectionId -> Put.Put
-putConnectionId = Put.putWord64be . fromIntegral
-
-getStreamId :: StreamSize -> Get.Get StreamId
-getStreamId Stream1Byte = I.getInt8
-getStreamId Stream2Byte = I.getInt16
-getStreamId Stream3Byte = I.getInt24
-getStreamId Stream4Byte = I.getInt32
-
-putStreamId :: StreamId -> Put.Put
-putStreamId sid
-  | (sid < 2^8 ) = Put.putWord8 $ fromIntegral sid
-  | (sid < 2^16) = Put.putInt16be $ fromIntegral sid
-  | (sid < 2^24) = error "not yet implemented in Network.QUIC.Codec"
-  | otherwise = Put.putInt32be $ fromIntegral sid
-
-getOffset :: OffsetSize -> Get.Get Offset
-getOffset NoExistOffset = return 0
-getOffset Offset2Byte   = fromIntegral <$> I.getInt16
-getOffset Offset4Byte   = fromIntegral <$> I.getInt32
-getOffset Offset8Byte   = fromIntegral <$> I.getInt64
-
-putOffset :: Offset -> Put.Put
-putOffset offset
-  | (offset < 2^16) = Put.putInt16be $ fromIntegral offset
-  | (offset < 2^32) = Put.putInt32be $ fromIntegral offset
-  | otherwise       = Put.putInt64be $ fromIntegral offset
-
-getTimeStamp :: Get.Get AckTimeStamp
-getTimeStamp = undefined
-
-getQUICVersion :: Get.Get QUICVersion
-getQUICVersion = undefined
-
-putQUICVersion :: QUICVersion ->  Put.Put
-putQUICVersion v = undefined
 
 -- | toHeaderType check Long or Short Header.
 toHeaderType :: Word8 -> HeaderType
