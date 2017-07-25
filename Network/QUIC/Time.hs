@@ -11,6 +11,12 @@ parseTime bs = undefined
     mantissa = undefined
     exponent = undefined
 
+addQUICTime :: QUICTime -> QUICTime -> QUICTime
+addQUICTime = undefined
+
+diffQUICTime :: QUICTime -> QUICTime -> QUICTime
+diffQUICTime lv rv = undefined
+
 toUTCTime :: QUICTime -> Clock.UTCTime
 toUTCTime = undefined
 
