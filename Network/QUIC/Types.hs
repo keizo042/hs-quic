@@ -10,10 +10,26 @@ import           Data.Default.Class
 import           Data.Int
 import qualified Data.Time.Clock    as Clock
 
--- | Packet Context, it is indicated by header mainly.
-data PacketContext = PacketContext { contextStreamSize :: StreamSize
-                                   , contextOffsetSize :: OffsetSize}
-             deriving (Show, Eq)
+
+-- | QUICResult is result type in the QUIC protocol context.
+type QUICResult a = Either QUICError a
+
+
+-- | Context is type that indicates the library main info context.
+data Context = Context { ctxMode    :: Mode
+                       , ctxVersion :: QUICVersion }
+             deriving Show
+
+-- | ShortPacketContext, it is indicated by short header .
+data ShortPacketContext = ShortPacketContext { shortPacketContextStreamSize :: StreamSize
+                                             , shortPacketContextOffsetSize :: OffsetSize}
+               deriving (Show, Eq)
+
+
+-- | LongHeaderContext
+data LongHeaderContext = LongHeaderContext { longHeaderContextHeaderType :: LongHeaderType
+                                           , longHeaderContextKeyPhase :: Bool }
+                       deriving Show
 
 data Header = LongHeader LongHeaderType ConnectionId PacketNumber QUICVersion
             | ShortHeader (Maybe ConnectionId) PacketNumber
@@ -44,6 +60,28 @@ data LongHeaderPayload = VersionNegotiation  QUICVersion [QUICVersion]
                 | OneRTTProtectedKeyPhaseOne
                 | PublicReset
                 deriving (Show, Eq)
+
+-- | ShortHeaderPayload
+type ShortHeaderPayload = [Frame]
+
+-- | Frame
+-- TODO: note commnets.
+data Frame = Stream !StreamId !Offset !ByteString
+           | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
+           | MaxData !Int64
+           | MaxStreamData !StreamId !Int
+           | MaxStreamId !StreamId
+           | Blocked
+           | StreamBlocked !StreamId
+           | StreamIdNeeded
+           | RstStream !StreamId !ErrorCode !Offset
+           | Padding
+           | Ping
+           | NewConnectionId !Int !ConnectionId -- Sequence ConnectionId
+           | ConnectionClose !ErrorCode !ByteString -- ErrorCode ErrorMessage
+           | Goaway !StreamId !StreamId
+           deriving Show
+
 
 -- | Internal use
 data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte
@@ -106,25 +144,6 @@ type Gap = Int
 data AckTimeStamp = AckTimeStamp [(Gap, QUICTime)]
                   deriving Show
 
--- | Frame
--- TODO: note commnets.
-data Frame = Stream !StreamId !Offset !ByteString
-           | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
-           | MaxData !Int64
-           | MaxStreamData !StreamId !Int
-           | MaxStreamId !StreamId
-           | Blocked
-           | StreamBlocked !StreamId
-           | StreamIdNeeded
-           | RstStream !StreamId !ErrorCode !Offset
-           | Padding
-           | Ping
-           | NewConnectionId !Int !ConnectionId -- Sequence ConnectionId
-           | ConnectionClose !ErrorCode !ByteString -- ErrorCode ErrorMessage
-           | Goaway !StreamId !StreamId
-           deriving Show
-
-
 type PacketNumber = Integer
 
 type ConnectionId = Integer
@@ -134,10 +153,9 @@ type QUICVersion = Int32
 -- TODO: on LongPacket, Payload filed is not suitable. it will be removed.
 -- LongHeaderPacket should include the payload and LongHeaderPacket is renamed to good one.
 data Packet = LongPacket Header LongHeaderPayload
-            | ShortPacket Header Payload
+            | ShortPacket Header ShortHeaderPayload
             deriving Show
 
-type Payload = [Frame]
 
 -- | ErrorCode is exported error code api.
 -- TODO: check it is good?
@@ -208,18 +226,6 @@ data QUICError = QUICInternalError
 
 
 
--- | QUICResult is result type in the QUIC protocol context.
-type QUICResult a = Either QUICError a
-
--- | LongHeaderContext
-data LongHeaderContext = LongHeaderContext { longHeaderContextHeaderType :: LongHeaderType
-                                           , longHeaderContextKeyPhase :: Bool }
-                       deriving Show
-
--- | Context is type that indicates the library main info context.
-data Context = Context { ctxMode    :: Mode
-                       , ctxVersion :: QUICVersion }
-             deriving Show
 
 -- | the context is client or server.
 data Mode = Client | Server

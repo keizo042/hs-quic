@@ -207,7 +207,7 @@ decodeFrame hdr bss = case (toFrameType b) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInternalError
         where
-          ss = contextStreamSize ctx
+          ss = shortPacketContextStreamSize ctx
           decode' :: Get.Get Frame
           decode' = MaxStreamData <$> getStreamId ss <*> getMaxStreamData
           getMaxStreamData = fromIntegral <$> Get.getInt64be
@@ -216,7 +216,7 @@ decodeFrame hdr bss = case (toFrameType b) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInternalError
         where
-          ss = contextStreamSize ctx
+          ss = shortPacketContextStreamSize ctx
           decode' :: Get.Get Frame
           decode' = MaxStreamId <$> getStreamId ss
 
@@ -228,7 +228,7 @@ decodeFrame hdr bss = case (toFrameType b) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInternalError
         where
-          ss = contextStreamSize ctx
+          ss = shortPacketContextStreamSize ctx
           decode' :: Get.Get Frame
           decode' = StreamBlocked <$> getStreamId ss
 
@@ -243,8 +243,8 @@ decodeFrame hdr bss = case (toFrameType b) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInvalidRstStreamData
         where
-          ss = contextStreamSize ctx
-          oo = contextOffsetSize ctx
+          ss = shortPacketContextStreamSize ctx
+          oo = shortPacketContextOffsetSize ctx
           decode' :: Get.Get Frame
           decode' = RstStream <$> getStreamId ss <*> getErrorCode <*> getOffset oo
 
@@ -269,7 +269,7 @@ decodeFrame hdr bss = case (toFrameType b) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInvalidGoawayData
         where
-          ss = contextStreamSize ctx
+          ss = shortPacketContextStreamSize ctx
           decode' ::  Get.Get Frame
           decode' = Goaway <$> getStreamId ss <*> getStreamId ss
 
@@ -280,16 +280,16 @@ encode :: Packet -> ByteString
 encode (LongPacket hdr payload)       = encodeHeader hdr `BS.append`
                                            encodeLongHeaderPayload payload
                                            where
-                                             ctx :: PacketContext
+                                             ctx :: ShortPacketContext
                                              ctx = undefined
 encode (ShortPacket hdr payload)         = encodeHeader hdr `BS.append`
                                            encodeFrames ctx payload
                                            where
-                                             ctx :: PacketContext
+                                             ctx :: ShortPacketContext
                                              ctx = undefined
 
 
-encodeFrames :: PacketContext -> [Frame] -> ByteString
+encodeFrames :: ShortPacketContext -> [Frame] -> ByteString
 encodeFrames _ []       = BS.empty
 encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
 
@@ -320,7 +320,7 @@ encodeHeader (ShortHeader c pn)   = LBS.toStrict $ Put.runPut $ do
                                     else return ()
                                   putPacketNumber pn
 
-encodeFrame :: PacketContext -> Frame -> ByteString
+encodeFrame :: ShortPacketContext -> Frame -> ByteString
 encodeFrame ctx f =  case f of
                                   (Stream s o bs)    -> encodeStreamFrame s o bs
                                   (Ack mi i pktn t0 t1 ablk stamps) -> undefined
