@@ -60,29 +60,28 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
     decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                          Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-                         Left _               -> Left QUICInvalidPacketHeader
+                         (Left _)             -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
-        decode' = do
-          w <- Get.getWord8
-          cid <- getConnectionId
-          pktn <- getPacketNumber
-          v <- getQUICVersion
-          case (toLongHeaderType w) of
-            Nothing  -> error "must return invalid header type digit" -- TODO: See error function
-            (Just t) -> return $ LongHeader t cid pktn v
+        decode' = Get.getWord8 >>= (\w -> LongHeader <$> getHeaderType w
+                                   <*> getConnectionId
+                                   <*> getPacketNumber
+                                   <*> getQUICVersion)
+            where
+              getHeaderType :: Word8 -> Get.Get LongHeaderType
+              getHeaderType w = case (toLongHeaderType w) of
+                (Just t) -> return t
+                Nothing  -> fail "invalid long header type"
+
     decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
         Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
         Left _               -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
-        decode' = do
-          w <- Get.getWord8
-          c <- if hasConn w then Just <$> getConnectionId else return Nothing
-          cid <- getConnectionId
-          return $ ShortHeader c cid
+        decode' = Get.getWord8 >>= (\w -> ShortHeader <$> getConnMaybe w <*> getPacketNumber)
           where
+            getConnMaybe w = if hasConn w then Just <$> getConnectionId else return Nothing
             hasConn w = w .|. 0x40 == 0x40
 
 -- | decodeLongHeaderPayload that it decode Payload with LongHeader.
@@ -101,18 +100,11 @@ decodeLongHeaderPayload ctx bs = case (longHeaderContextHeaderType ctx) of
      PublicResetType                 -> decodePublicReset
      where
        decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
-                                       (Right (bs', _, (v:vs))) -> Right (VersionNegotiation v vs, LBS.toStrict bs')
-                                       (Left _) -> Left QUICInvalidVersionNegotiationPacket
+           (Right (bs', _, (v:vs))) -> Right (VersionNegotiation v vs, LBS.toStrict bs')
+           (Left _) -> Left QUICInvalidVersionNegotiationPacket
         where
           decode :: Get.Get [QUICVersion]
-          decode = do
-            b <- Get.isEmpty
-            if b
-              then return []
-              else do
-                v <- getQUICVersion
-                vs <- decode
-                return (v:vs)
+          decode = Get.isEmpty >>= (\b -> if b then return [] else (:) <$> getQUICVersion <*> decode)
        decodeClientInitial                = undefined
        decodeServerStatelessRetry         = undefined
        decodeServerClearText              = undefined
@@ -260,9 +252,11 @@ decodeFrame ctx bss = case (toFrameType b) of
         where
           decode' :: Get.Get Frame
           decode' = ConnectionClose <$> getErrorCode  <*> getMsg
-          getMsg = Get.getInt32be >>= (\ n -> if n == 0
-                                  then LBS.toStrict <$> Get.getRemainingLazyByteString
-                                  else Get.getByteString $ fromIntegral n)
+          getMsg = Get.getInt32be >>= getmsg'
+            where
+              getmsg' n = if n == 0
+                            then LBS.toStrict <$> Get.getRemainingLazyByteString
+                            else Get.getByteString $ fromIntegral n
 
      decodeGoawayFrame ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
