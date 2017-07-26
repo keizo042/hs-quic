@@ -227,7 +227,8 @@ data QUICError = QUICInternalError
 
 
 
--- | the context is client or server.
+-- | Mode, the context is client or server.
+-- | internal use.
 data Mode = Client | Server
           deriving Show
 
