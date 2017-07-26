@@ -30,16 +30,17 @@ decode :: ByteString -> QUICResult Packet
 decode bs = case (decodeHeader bs) of
               Left e           -> Left e
               Right (hdr, bs') -> case hdr of
-                  (ShortHeader _ _)    -> decodeWithShort hdr bs'
+                  (ShortHeader _ _)    -> case (decodeWithShortHeader hdr bs') of
+                        (Right payload) -> Right $ ShortPacket hdr payload
+                        (Left e)        -> Left e
                   (LongHeader _ _ _ _) -> case (decodeLongHeaderPayload ctx bs') of
                         (Right (payload, bs'')) -> Right $ LongPacket hdr payload
                         (Left e)                -> Left e
     where
       ctx :: LongHeaderContext
-      ctx = undefined
-      decodeWithShort hdr bs = case (decodeFrames hdr bs) of
-          (Right fs) -> Right (ShortPacket hdr fs)
-          (Left e)   -> Left e
+      ctx = error "should get StreamSize from headr"
+      decodeWithShortHeader :: Header -> ByteString -> QUICResult ShortHeaderPayload
+      decodeWithShortHeader hdr bs = decodeFrames hdr bs
 
 
 decodeFrames :: Header -> ByteString -> QUICResult [Frame]
