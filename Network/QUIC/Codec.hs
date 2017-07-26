@@ -30,22 +30,22 @@ decode :: ByteString -> QUICResult Packet
 decode bs = case (decodeHeader bs) of
               Left e           -> Left e
               Right (hdr, bs') -> case hdr of
-                  (ShortHeader _ _)    -> case (decodeWithShortHeader hdr bs') of
+                  (ShortHeader _ _)    -> let ctx = undefined
+                      in case (decodeWithShortHeader ctx bs') of
                         (Right payload) -> Right $ ShortPacket hdr payload
                         (Left e)        -> Left e
-                  (LongHeader _ _ _ _) -> case (decodeLongHeaderPayload ctx bs') of
+                  (LongHeader _ _ _ _) -> let ctx = undefined
+                      in case (decodeLongHeaderPayload ctx bs') of
                         (Right (payload, bs'')) -> Right $ LongPacket hdr payload
                         (Left e)                -> Left e
     where
-      ctx :: LongHeaderContext
-      ctx = error "should get StreamSize from headr"
-      decodeWithShortHeader :: Header -> ByteString -> QUICResult ShortHeaderPayload
-      decodeWithShortHeader hdr bs = decodeFrames hdr bs
+      decodeWithShortHeader :: ShortPacketContext -> ByteString -> QUICResult ShortHeaderPayload
+      decodeWithShortHeader ctx bs = decodeFrames ctx bs
 
 
-decodeFrames :: Header -> ByteString -> QUICResult [Frame]
-decodeFrames hdr bs = case (decodeFrame hdr bs) of
-                        Right (f,bs') -> case (decodeFrames hdr bs') of
+decodeFrames :: ShortPacketContext -> ByteString -> QUICResult [Frame]
+decodeFrames ctx bs = case (decodeFrame ctx bs) of
+                        Right (f,bs') -> case (decodeFrames ctx bs') of
                                      Right fs -> Right (f : fs)
                                      Left e   -> Left e
                         Left e  -> Left e
@@ -122,8 +122,8 @@ decodeLongHeaderPayload ctx bs = case (longHeaderContextHeaderType ctx) of
        decodeOneRTTPRotectedKeyPhaseOne   = undefined
        decodePublicReset                  = undefined
 
-decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
-decodeFrame hdr bss = case (toFrameType b) of
+decodeFrame :: ShortPacketContext -> ByteString -> QUICResult (Frame, ByteString)
+decodeFrame ctx bss = case (toFrameType b) of
                        Nothing    -> Left QUICInvalidFrameData
                        Just ft  -> case ft of
 
@@ -140,14 +140,12 @@ decodeFrame hdr bss = case (toFrameType b) of
                          ConnectionCloseType  -> decodeConnectionCloseFrame ctx bs
 
 
-                         (StreamType f ss oo d)  -> decodeStreamFrame hdr f ss oo d bs
-                         (AckType n lack abl)    -> decodeAckFrame hdr n lack abl bs
+                         (StreamType f ss oo d)  -> decodeStreamFrame ctx f ss oo d bs
+                         (AckType n lack abl)    -> decodeAckFrame ctx n lack abl bs
    where
      (b, bs) = (BS.head bss, BS.tail bss)
-     -- TODO: desgin what packet context reuqire
-     ctx = error "consider how we build packet context"
 
-     decodeStreamFrame :: Header ->
+     decodeStreamFrame :: ShortPacketContext ->
                           Bool ->       -- stream is finished
                           StreamSize -> -- has stream id field
                           OffsetSize -> -- has offset field
@@ -168,7 +166,7 @@ decodeFrame hdr bss = case (toFrameType b) of
                              else Get.getByteString $ fromIntegral n
            len = if d then I.getInt16 else return 0
 
-     decodeAckFrame hdr n lack abl bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+     decodeAckFrame ctx n lack abl bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInvalidAckData
         where
