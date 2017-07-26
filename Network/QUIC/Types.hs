@@ -211,6 +211,11 @@ data QUICError = QUICInternalError
 -- | QUICResult is result type in the QUIC protocol context.
 type QUICResult a = Either QUICError a
 
+-- | LongHeaderContext
+data LongHeaderContext = LongHeaderContext { longHeaderContextHeaderType :: HeaderType
+                                           , longHeaderContextKeyPhase :: Bool }
+                       deriving Show
+
 -- | Context is type that indicates the library main info context.
 data Context = Context { ctxMode    :: Mode
                        , ctxVersion :: QUICVersion }

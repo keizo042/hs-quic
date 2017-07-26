@@ -31,10 +31,12 @@ decode bs = case (decodeHeader bs) of
               Left e           -> Left e
               Right (hdr, bs') -> case hdr of
                   (ShortHeader _ _)    -> decodeWithShort hdr bs'
-                  (LongHeader _ _ _ _) -> case (decodeLongHeaderPayload bs') of
+                  (LongHeader _ _ _ _) -> case (decodeLongHeaderPayload ctx bs') of
                         (Right (payload, bs'')) -> Right $ LongPacket hdr payload
                         (Left e)                -> Left e
     where
+      ctx :: LongHeaderContext
+      ctx = undefined
       decodeWithShort hdr bs = case (decodeFrames hdr bs) of
           (Right fs) -> Right (ShortPacket hdr fs)
           (Left e)   -> Left e
@@ -82,8 +84,42 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
           where
             hasConn w = w .|. 0x40 == 0x40
 
-decodeLongHeaderPayload :: ByteString -> QUICResult (LongHeaderPayload, ByteString)
-decodeLongHeaderPayload bs = undefined
+-- | decodeLongHeaderPayload that it decode Payload with LongHeader.
+-- | it was chcked  payload type in Long Header prefix octet and parse rest of octet.
+-- |
+decodeLongHeaderPayload :: LongHeaderContext -> ByteString -> QUICResult (LongHeaderPayload, ByteString)
+decodeLongHeaderPayload ctx bs = case (longHeaderContextHeaderType ctx) of
+     VersionNegotiationType          -> decodeVersionNegotiation bs
+     ClientInitialType               -> decodeClientInitial
+     ServerStatelessRetryType        -> decodeServerStatelessRetry
+     ServerCleartextType             -> decodeServerClearText
+     ClientCleartextType             -> decodeClearClearText
+     ZeroRTTProtectedType            -> decodeZeroRTTProtected
+     OneRTTProtectedKeyPhaseZeroType -> decodeOneRTTProtectedKeyPhaseZero
+     OneRTTProctectedKeyPhaseOneType -> decodeOneRTTPRotectedKeyPhaseOne
+     PublicResetType                 -> decodePublicReset
+     where
+       decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
+                                       (Right (bs', _, vs)) -> Right (VersionNegotiation vs, bs')
+                                       (Left _) -> Left QUICInvalidVersionNegotiationPacket
+        where
+          decode :: Get LongPacket
+          decode = do
+            b <- Get.isEmpty
+            if b
+              then return []
+              else do
+                v <- getVersion
+                vs <- decode
+                return (v:vs)
+       decodeClientInitial                = undefined
+       decodeServerStatelessRetry         = undefined
+       decodeServerClearText              = undefined
+       decodeClearClearText               = undefined
+       decodeZeroRTTProtected             = undefined
+       decodeOneRTTProtectedKeyPhaseZero  = undefined
+       decodeOneRTTPRotectedKeyPhaseOne   = undefined
+       decodePublicReset                  = undefined
 
 decodeFrame :: Header -> ByteString -> QUICResult (Frame, ByteString)
 decodeFrame hdr bss = case (toFrameType b) of
