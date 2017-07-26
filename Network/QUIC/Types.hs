@@ -212,7 +212,7 @@ data QUICError = QUICInternalError
 type QUICResult a = Either QUICError a
 
 -- | LongHeaderContext
-data LongHeaderContext = LongHeaderContext { longHeaderContextHeaderType :: HeaderType
+data LongHeaderContext = LongHeaderContext { longHeaderContextHeaderType :: LongHeaderType
                                            , longHeaderContextKeyPhase :: Bool }
                        deriving Show
 

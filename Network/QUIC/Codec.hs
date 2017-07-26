@@ -100,16 +100,16 @@ decodeLongHeaderPayload ctx bs = case (longHeaderContextHeaderType ctx) of
      PublicResetType                 -> decodePublicReset
      where
        decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
-                                       (Right (bs', _, vs)) -> Right (VersionNegotiation vs, bs')
+                                       (Right (bs', _, (v:vs))) -> Right (VersionNegotiation v vs, LBS.toStrict bs')
                                        (Left _) -> Left QUICInvalidVersionNegotiationPacket
         where
-          decode :: Get LongPacket
+          decode :: Get.Get [QUICVersion]
           decode = do
             b <- Get.isEmpty
             if b
               then return []
               else do
-                v <- getVersion
+                v <- getQUICVersion
                 vs <- decode
                 return (v:vs)
        decodeClientInitial                = undefined
