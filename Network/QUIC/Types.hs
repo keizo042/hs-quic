@@ -20,16 +20,12 @@ data Context = Context { ctxMode    :: Mode
                        , ctxVersion :: QUICVersion }
              deriving Show
 
--- | ShortPacketContext, it is indicated by short header .
-data ShortPacketContext = ShortPacketContext { shortPacketContextStreamSize :: StreamSize
-                                             , shortPacketContextOffsetSize :: OffsetSize}
-               deriving (Show, Eq)
 
 
 -- | LongHeaderContext
-data LongHeaderContext = LongHeaderContext { longHeaderContextHeaderType :: LongHeaderType
-                                           , longHeaderContextKeyPhase :: Bool }
-                       deriving Show
+data LongPacketContext = LongPacketContext { longPacketContextLongHeaderType :: LongHeaderType
+                                           , longPacketContextKeyPhase :: Bool }
+                       deriving (Show, Eq)
 
 data Header = LongHeader LongHeaderType ConnectionId PacketNumber QUICVersion
             | ShortHeader (Maybe ConnectionId) PacketNumber
@@ -82,6 +78,17 @@ data Frame = Stream !StreamId !Offset !ByteString
            | Goaway !StreamId !StreamId
            deriving Show
 
+
+data PacketNumberSize = PacketNumber1Byte | PacketNumber2Byte | PacketNumber4Byte
+
+data DecodeContext = DecodeContext { decodeContextStreamSize :: StreamSize
+                                   , decodeContextOffsetSize :: OffsetSize
+                                   , decodeContextLongPacketContext :: Maybe LongPacketContext}
+                                   deriving (Show)
+
+data EncodeContext = EncodeContext { encodeContextStreamSize :: StreamSize
+                                   , encodeContextOffsetSize :: OffsetSize  }
+                                   deriving (Show)
 
 -- | Internal use
 data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte
