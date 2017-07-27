@@ -168,6 +168,15 @@ hasConnectionId w = w .&. 0x40 ==  0x40
 hasKeyPhase :: Word8 -> Bool
 hasKeyPhase w = w .&. 0x20 == 0x20
 
+toPacketNumberSize :: LongHeaderType -> PacketNumberSize
+toPacketNumberSize ft = case ft of
+                          VersionNegotiationType   -> undefined
+                          ServerStatelessRetryType -> undefined
+                          ClientInitialType        -> undefined
+                          _                        -> PacketNumber4Byte
+
+
+
 errorCodeToInt :: ErrorCode -> Int
 errorCodeToInt (ApplicationErrorCode i) = i
 errorCodeToInt (HostLocalErrorCode i)   = i

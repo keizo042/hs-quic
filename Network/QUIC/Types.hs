@@ -83,12 +83,12 @@ data PacketNumberSize = PacketNumber1Byte | PacketNumber2Byte | PacketNumber4Byt
 
 data DecodeContext = DecodeContext { decodeContextStreamSize :: StreamSize
                                    , decodeContextOffsetSize :: OffsetSize
+                                   , decodeContextPacketNumberSize :: PacketNumberSize
                                    , decodeContextLongPacketContext :: Maybe LongPacketContext}
-                                   deriving (Show)
 
-data EncodeContext = EncodeContext { encodeContextStreamSize :: StreamSize
+data EncodeContext = EncodeContext { encodeContextPacketNumberSize :: PacketNumberSize
+                                   , encodeContextStreamSize :: StreamSize
                                    , encodeContextOffsetSize :: OffsetSize  }
-                                   deriving (Show)
 
 -- | Internal use
 data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte

@@ -54,13 +54,13 @@ decodeFrames ctx bs = case (decodeFrame ctx bs) of
 
 decodeHeader :: ByteString -> QUICResult (Header, ByteString)
 decodeHeader bs =  case (toHeaderType $ BS.head bs) of
-                     LongHeaderType  -> decodeLongHeader bs
-                     ShortHeaderType -> decodeShortHeader bs
+   LongHeaderType  -> decodeLongHeader bs
+   ShortHeaderType -> decodeShortHeader bs
   where
     decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                         Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-                         (Left _)             -> Left QUICInvalidPacketHeader
+       Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
+       _                    -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
         decode' = Get.getWord8 >>= (\w -> LongHeader <$> getHeaderType w
@@ -76,69 +76,94 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
     decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
     decodeShortHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
         Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-        Left _               -> Left QUICInvalidPacketHeader
+        _                    -> Left QUICInvalidPacketHeader
       where
         decode' :: Get.Get Header
-        decode' = Get.getWord8 >>= (\w -> ShortHeader <$> getConnMaybe w <*> getPacketNumber)
+        decode' = Get.getWord8 >>= (\w -> ShortHeader <$> getConnIdMaybe w <*> getPacketNumber)
           where
-            getConnMaybe w = if hasConn w then Just <$> getConnectionId else return Nothing
+            getConnIdMaybe w = if hasConn w then Just <$> getConnectionId else return Nothing
             hasConn w = w .|. 0x40 == 0x40
 
 -- | decodeLongPacketPayload that it decode Payload with LongHeader.
 -- | it was chcked  payload type in Long Header prefix octet and parse rest of octet.
--- |
 decodeLongPacketPayload :: DecodeContext -> ByteString -> QUICResult (LongPacketPayload, ByteString)
 decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
-                                   Nothing -> Left QUICInvalidPacketHeader
-                                   (Just c) -> f (longPacketContextLongHeaderType c)
+       (Just c) -> choiceDecoder (longPacketContextLongHeaderType c)
+       Nothing  -> Left QUICInvalidPacketHeader
      where
-       f typ = case typ of
+       choiceDecoder typ = case typ of
          VersionNegotiationType          -> decodeVersionNegotiation bs
           where
-           decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
+            decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
                (Right (bs', _, (v:vs))) -> Right (VersionNegotiation v vs, LBS.toStrict bs')
                (Left _) -> Left QUICInvalidVersionNegotiationPacket
-            where
-              decode :: Get.Get [QUICVersion]
-              decode = Get.isEmpty >>= (\b -> if b then return [] else (:) <$> getQUICVersion <*> decode)
+            decode :: Get.Get [QUICVersion]
+            decode = Get.isEmpty >>= (\b -> if b then return [] else (:) <$> getQUICVersion <*> decode)
+
          ClientInitialType               -> decodeClientInitial
+          where
+           decodeClientInitial  = case (Get.runGetOrFail decode $ LBS.fromStrict bs) of
+                (Right (bs', _, d)) -> Right (d, LBS.toStrict bs')
+                _                   -> Left QUICInternalError -- TODO: maybe there are proper error.
+           decode         = undefined
+
          ServerStatelessRetryType        -> decodeServerStatelessRetry
+          where
+            decodeServerStatelessRetry  = undefined
+            decode = undefined
+
          ServerCleartextType             -> decodeServerClearText
+          where
+            decodeServerClearText = undefined
+            decode = undefined
+
          ClientCleartextType             -> decodeClearClearText
+          where
+            decodeClearClearText  = undefined
+            decode = undefined
+
          ZeroRTTProtectedType            -> decodeZeroRTTProtected
+          where
+            decodeZeroRTTProtected  = undefined
+            decode = undefined
+
          OneRTTProtectedKeyPhaseZeroType -> decodeOneRTTProtectedKeyPhaseZero
+          where
+            decodeOneRTTProtectedKeyPhaseZero = undefined
+            decode = undefined
+
          OneRTTProctectedKeyPhaseOneType -> decodeOneRTTPRotectedKeyPhaseOne
+          where
+            decodeOneRTTPRotectedKeyPhaseOne  = undefined
+            decode = undefined
+
          PublicResetType                 -> decodePublicReset
-       decodeClientInitial                = undefined
-       decodeServerStatelessRetry         = undefined
-       decodeServerClearText              = undefined
-       decodeClearClearText               = undefined
-       decodeZeroRTTProtected             = undefined
-       decodeOneRTTProtectedKeyPhaseZero  = undefined
-       decodeOneRTTPRotectedKeyPhaseOne   = undefined
-       decodePublicReset                  = undefined
+          where
+            decodePublicReset = undefined
+            decode = undefined
 
 decodeFrame :: DecodeContext -> ByteString -> QUICResult (Frame, ByteString)
 decodeFrame ctx bss = case (toFrameType b) of
-                       Nothing    -> Left QUICInvalidFrameData
-                       Just ft  -> case ft of
+   Nothing    -> Left QUICInvalidFrameData
+   Just ft  -> choiceDecoder ft
+    where
+     choiceDecoder =  case ft of
+       MaxDataType            -> decodeMaxDataFrame bs
+       PaddingType            -> decodePaddingFrame bs
+       PingType               -> decodePingFrame    bs
 
-                         MaxDataType          -> decodeMaxDataFrame bs
-                         PaddingType          -> decodePaddingFrame bs
-                         PingType             -> decodePingFrame    bs
-
-                         MaxStreamDataType    -> decodeMaxStreamDataFrame   ctx bs
-                         MaxStreamIdType      -> decodeMaxStreamIdFrame     ctx bs
-                         StreamBlockedType    -> decodeStreamBlockedFrame   ctx bs
-                         StreamIdNeededType   -> decodeStreamIdNeededFrame  ctx bs
-                         RstStreamType        -> decodeRstStreamFrame       ctx bs
-                         NewConnectionType    -> decodeNewConnectionIdFrame ctx bs
-                         ConnectionCloseType  -> decodeConnectionCloseFrame ctx bs
+       MaxStreamDataType      -> decodeMaxStreamDataFrame   ctx bs
+       MaxStreamIdType        -> decodeMaxStreamIdFrame     ctx bs
+       StreamBlockedType      -> decodeStreamBlockedFrame   ctx bs
+       StreamIdNeededType     -> decodeStreamIdNeededFrame  ctx bs
+       RstStreamType          -> decodeRstStreamFrame       ctx bs
+       NewConnectionType      -> decodeNewConnectionIdFrame ctx bs
+       ConnectionCloseType    -> decodeConnectionCloseFrame ctx bs
 
 
-                         (StreamType f ss oo d)  -> decodeStreamFrame ctx f ss oo d bs
-                         (AckType n lack abl)    -> decodeAckFrame ctx n lack abl bs
-   where
+       (StreamType f ss oo d) -> decodeStreamFrame ctx f ss oo d bs
+       (AckType n lack abl)   -> decodeAckFrame ctx n lack abl bs
+
      (b, bs) = (BS.head bss, BS.tail bss)
 
      decodeStreamFrame :: DecodeContext ->
@@ -190,15 +215,15 @@ decodeFrame ctx bss = case (toFrameType b) of
           getTimeStamps nts = undefined
 
      decodeMaxDataFrame bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInvalidAckData
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInvalidAckData
         where
           decode' :: Get.Get Frame
           decode' = MaxData <$> Get.getInt64be
 
      decodeMaxStreamDataFrame ctx bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInternalError
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInternalError
         where
           ss = undefined
           decode' :: Get.Get Frame
@@ -206,8 +231,8 @@ decodeFrame ctx bss = case (toFrameType b) of
           getMaxStreamData = fromIntegral <$> Get.getInt64be
 
      decodeMaxStreamIdFrame ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInternalError
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInternalError
         where
           ss = undefined
           decode' :: Get.Get Frame
@@ -218,23 +243,23 @@ decodeFrame ctx bss = case (toFrameType b) of
      decodePingFrame    bs  = Right (Ping,    bs)
 
      decodeStreamBlockedFrame ctx bs= case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInternalError
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInternalError
         where
           ss = undefined
           decode' :: Get.Get Frame
           decode' = StreamBlocked <$> getStreamId ss
 
      decodeStreamIdNeededFrame ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInvalidStreamId
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInvalidStreamId
         where
           decode' :: Get.Get Frame
           decode' = return StreamIdNeeded
 
      decodeRstStreamFrame ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInvalidRstStreamData
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInvalidRstStreamData
         where
           ss = undefined
           oo = undefined
@@ -242,15 +267,15 @@ decodeFrame ctx bss = case (toFrameType b) of
           decode' = RstStream <$> getStreamId ss <*> getErrorCode <*> getOffset oo
 
      decodeNewConnectionIdFrame ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInternalError
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInternalError
         where
           decode' :: Get.Get Frame
           decode' = NewConnectionId <$> (fromIntegral <$> Get.getInt16be) <*> getConnectionId
 
      decodeConnectionCloseFrame ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInvalidConnectionCloseData
+       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+       _ -> Left QUICInvalidConnectionCloseData
         where
           decode' :: Get.Get Frame
           decode' = ConnectionClose <$> getErrorCode  <*> getMsg
@@ -272,16 +297,14 @@ decodeFrame ctx bss = case (toFrameType b) of
 
 -- | encode is a API to encode to Packet of QUIC.
 encode :: Packet -> ByteString
-encode (LongPacket hdr payload)       = encodeHeader hdr `BS.append`
-                                           encodeLongPacketPayload ctx payload
-                                           where
-                                             ctx :: EncodeContext
-                                             ctx = undefined
-encode (ShortPacket hdr payload)         = encodeHeader hdr `BS.append`
-                                           encodeFrames ctx payload
-                                           where
-                                             ctx :: EncodeContext
-                                             ctx = undefined
+encode (LongPacket hdr payload) = encodeHeader hdr `BS.append` encodeLongPacketPayload ctx payload
+   where
+     ctx :: EncodeContext
+     ctx = undefined
+encode (ShortPacket hdr payload)  = encodeHeader hdr `BS.append` encodeFrames ctx payload
+   where
+     ctx :: EncodeContext
+     ctx = undefined
 
 
 encodeFrames :: EncodeContext -> [Frame] -> ByteString
@@ -306,31 +329,40 @@ encodeLongPacketPayload ctx payload = f ctx payload
 
 
 encodeHeader :: Header -> ByteString
-encodeHeader (LongHeader typ c pn v) = LBS.toStrict $ Put.runPut $ do
-                                  putLongHeaderType typ
-                                  putConnectionId c
-                                  putPacketNumber pn
-                                  putQUICVersion v
+encodeHeader (LongHeader typ c pn v) = LBS.toStrict $ Put.runPut $ p
+  where
+    p = do
+      putLongHeaderType typ
+      putConnectionId c
+      putPacketNumber pn
+      putQUICVersion v
 
-encodeHeader (ShortHeader c pn)   = LBS.toStrict $ Put.runPut $ do
-                                  if Maybe.isJust c
-                                    then putConnectionId $ Maybe.fromJust c
-                                    else return ()
-                                  putPacketNumber pn
+encodeHeader (ShortHeader c pn)   = LBS.toStrict $ Put.runPut p
+  where
+    p = do
+      if Maybe.isJust c then putConnectionId $ Maybe.fromJust c else return ()
+      putPacketNumber pn
 
 encodeFrame :: EncodeContext -> Frame -> ByteString
-encodeFrame ctx f =  case f of
-                                  (Stream s o bs)    -> encodeStreamFrame s o bs
-                                  (Ack mi i pktn t0 t1 ablk stamps) -> undefined
-                                  -- TODO: implement other encoder for
-                                  -- frame
-                                  _                           -> undefined
+encodeFrame ctx f = choice f
   where
-    encodeStreamFrame s o bs = LBS.toStrict . Put.runPut $ putStreamId s >> putOffset o >> p (BS.length bs)  >> Put.putByteString bs
-      where
-        p 0 = return ()
-        p i =  Put.putInt8 $ fromIntegral i
-    encodeAckFrame mi i pn t0 t1 ablk stamps      =  LBS.toStrict . Put.runPut $ putPacketNumber pn
+    choice = case f of
+      (Stream s o bs)                   -> encodeStreamFrame s o bs
+        where
+          encodeStreamFrame s o bs = LBS.toStrict . Put.runPut p
+            where
+              p = putStreamId s >> putOffset o >> p (BS.length bs)  >> Put.putByteString bs
+              putBS 0 = return ()
+              putBS i =  Put.putInt8 $ fromIntegral i
+
+      (Ack mi i pktn t0 t1 ablk stamps) -> undefined
+        where
+          encodeAckFrame mi i pn t0 t1 ablk stamps      =  LBS.toStrict . Put.runPut p
+            where
+              p =  putPacketNumber pn
+
+      -- TODO: implement other encoder for frame
+      _                                 -> undefined
     encodePaddingFrame :: Put.Put
     encodePaddingFrame  = Put.putByteString $ BS.singleton 0x60
     encodeGoawayFrame   = undefined
