@@ -28,27 +28,32 @@ import           Network.QUIC.Types
 -- | decode is a API to decode Packet of QUIC.
 decode :: ByteString -> QUICResult Packet
 decode bs = case (decodeHeader bs) of
-              Left e           -> Left e
-              Right (hdr, bs') -> case hdr of
-                  (ShortHeader _ _)    -> let ctx = undefined
-                      in case (decodeWithShortHeader ctx bs') of
-                        (Right payload) -> Right $ ShortPacket hdr payload
-                        (Left e)        -> Left e
-                  (LongHeader _ _ _ _) -> let ctx = undefined
-                      in case (decodeLongPacketPayload ctx bs') of
-                        (Right (payload, bs'')) -> Right $ LongPacket hdr payload
-                        (Left e)                -> Left e
+  Left e           -> Left e
+  Right (hdr, bs') -> checkHeader hdr
     where
+      checkHeader hdr =  case hdr of
+        (ShortHeader _ _)    -> let ctx = undefined
+          in case (decodeWithShortHeader ctx bs') of
+            (Right payload) -> Right $ ShortPacket hdr payload
+            (Left e)        -> Left e
+        (LongHeader _ _ _ _) -> let ctx = undefined
+          in case (decodeLongPacketPayload ctx bs') of
+            (Right (payload, bs'')) -> Right $ LongPacket hdr payload
+            (Left e)                -> Left e
+
       decodeWithShortHeader :: DecodeContext -> ByteString -> QUICResult ShortPacketPayload
       decodeWithShortHeader ctx bs = decodeFrames ctx bs
 
 
 decodeFrames :: DecodeContext -> ByteString -> QUICResult [Frame]
 decodeFrames ctx bs = case (decodeFrame ctx bs) of
-                        Right (f,bs') -> case (decodeFrames ctx bs') of
-                                     Right fs -> Right (f : fs)
-                                     Left e   -> Left e
-                        Left e  -> Left e
+  Right (f,bs') -> checkFrames ctx f bs
+  Left e        -> Left e
+    where
+      checkFrames ctx f bs = case (decodeFrames ctx bs) of
+         Right fs -> Right (f : fs)
+         Left e   -> Left e
+
 
 
 
