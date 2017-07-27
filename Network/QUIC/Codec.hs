@@ -35,11 +35,11 @@ decode bs = case (decodeHeader bs) of
                         (Right payload) -> Right $ ShortPacket hdr payload
                         (Left e)        -> Left e
                   (LongHeader _ _ _ _) -> let ctx = undefined
-                      in case (decodeLongHeaderPayload ctx bs') of
+                      in case (decodeLongPacketPayload ctx bs') of
                         (Right (payload, bs'')) -> Right $ LongPacket hdr payload
                         (Left e)                -> Left e
     where
-      decodeWithShortHeader :: DecodeContext -> ByteString -> QUICResult ShortHeaderPayload
+      decodeWithShortHeader :: DecodeContext -> ByteString -> QUICResult ShortPacketPayload
       decodeWithShortHeader ctx bs = decodeFrames ctx bs
 
 
@@ -84,16 +84,23 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
             getConnMaybe w = if hasConn w then Just <$> getConnectionId else return Nothing
             hasConn w = w .|. 0x40 == 0x40
 
--- | decodeLongHeaderPayload that it decode Payload with LongHeader.
+-- | decodeLongPacketPayload that it decode Payload with LongHeader.
 -- | it was chcked  payload type in Long Header prefix octet and parse rest of octet.
 -- |
-decodeLongHeaderPayload :: DecodeContext -> ByteString -> QUICResult (LongHeaderPayload, ByteString)
-decodeLongHeaderPayload ctx bs = case (decodeContextLongPacketContext ctx) of
+decodeLongPacketPayload :: DecodeContext -> ByteString -> QUICResult (LongPacketPayload, ByteString)
+decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
                                    Nothing -> Left QUICInvalidPacketHeader
                                    (Just c) -> f (longPacketContextLongHeaderType c)
      where
        f typ = case typ of
          VersionNegotiationType          -> decodeVersionNegotiation bs
+          where
+           decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
+               (Right (bs', _, (v:vs))) -> Right (VersionNegotiation v vs, LBS.toStrict bs')
+               (Left _) -> Left QUICInvalidVersionNegotiationPacket
+            where
+              decode :: Get.Get [QUICVersion]
+              decode = Get.isEmpty >>= (\b -> if b then return [] else (:) <$> getQUICVersion <*> decode)
          ClientInitialType               -> decodeClientInitial
          ServerStatelessRetryType        -> decodeServerStatelessRetry
          ServerCleartextType             -> decodeServerClearText
@@ -102,12 +109,6 @@ decodeLongHeaderPayload ctx bs = case (decodeContextLongPacketContext ctx) of
          OneRTTProtectedKeyPhaseZeroType -> decodeOneRTTProtectedKeyPhaseZero
          OneRTTProctectedKeyPhaseOneType -> decodeOneRTTPRotectedKeyPhaseOne
          PublicResetType                 -> decodePublicReset
-       decodeVersionNegotiation bs = case (Get.runGetOrFail  decode $ LBS.fromStrict bs) of
-           (Right (bs', _, (v:vs))) -> Right (VersionNegotiation v vs, LBS.toStrict bs')
-           (Left _) -> Left QUICInvalidVersionNegotiationPacket
-        where
-          decode :: Get.Get [QUICVersion]
-          decode = Get.isEmpty >>= (\b -> if b then return [] else (:) <$> getQUICVersion <*> decode)
        decodeClientInitial                = undefined
        decodeServerStatelessRetry         = undefined
        decodeServerClearText              = undefined
@@ -170,9 +171,7 @@ decodeFrame ctx bss = case (toFrameType b) of
             nblock <- getNumBlock
             nts   <- getNTS
             error "not yet implemented ack frame decoder"
-          getNumBlock = if n
-                          then Just <$> I.getInt8
-                          else return Nothing
+          getNumBlock = if n then Just <$> I.getInt8 else return Nothing
           getNTS = fromIntegral <$> Get.getWord8
           getLAck lack =  fromIntegral <$> case lack of
                             LAck1Byte -> I.getInt8
@@ -274,7 +273,7 @@ decodeFrame ctx bss = case (toFrameType b) of
 -- | encode is a API to encode to Packet of QUIC.
 encode :: Packet -> ByteString
 encode (LongPacket hdr payload)       = encodeHeader hdr `BS.append`
-                                           encodeLongHeaderPayload payload
+                                           encodeLongPacketPayload ctx payload
                                            where
                                              ctx :: EncodeContext
                                              ctx = undefined
@@ -290,15 +289,18 @@ encodeFrames _ []       = BS.empty
 encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
 
 
-encodeLongHeaderPayload :: LongHeaderPayload -> ByteString
-encodeLongHeaderPayload (VersionNegotiation v vs)   = LBS.toStrict $ Put.runPut $ putQUICVersion v >> mapM_ putQUICVersion vs
-encodeLongHeaderPayload ClientInitial               = undefined
-encodeLongHeaderPayload ServerCleartext             = undefined
-encodeLongHeaderPayload ServerStatelessRetry        = undefined
-encodeLongHeaderPayload ClientCleartext             = undefined
-encodeLongHeaderPayload ZeroRTTProtected            = undefined
-encodeLongHeaderPayload OneRTTProtectedKeyPhaseZero = undefined
-encodeLongHeaderPayload OneRTTProtectedKeyPhaseOne  = undefined
+encodeLongPacketPayload :: EncodeContext -> LongPacketPayload -> ByteString
+encodeLongPacketPayload ctx payload = f ctx payload
+  where
+    f ctx p = case p of
+       (VersionNegotiation v vs)   -> LBS.toStrict $ Put.runPut $ putQUICVersion v >> mapM_ putQUICVersion vs
+       ClientInitial               -> undefined
+       ServerCleartext             -> undefined
+       ServerStatelessRetry        -> undefined
+       ClientCleartext             -> undefined
+       ZeroRTTProtected            -> undefined
+       OneRTTProtectedKeyPhaseZero -> undefined
+       OneRTTProtectedKeyPhaseOne  -> undefined
 
 
 

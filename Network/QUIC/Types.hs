@@ -46,7 +46,7 @@ data LongHeaderType = VersionNegotiationType
                     | PublicResetType
                     deriving (Show, Eq)
 
-data LongHeaderPayload = VersionNegotiation  QUICVersion [QUICVersion]
+data LongPacketPayload = VersionNegotiation  QUICVersion [QUICVersion]
                 | ClientInitial
                 | ServerStatelessRetry
                 | ServerCleartext
@@ -57,8 +57,8 @@ data LongHeaderPayload = VersionNegotiation  QUICVersion [QUICVersion]
                 | PublicReset
                 deriving (Show, Eq)
 
--- | ShortHeaderPayload
-type ShortHeaderPayload = [Frame]
+-- | ShortPacketPayload
+type ShortPacketPayload = [Frame]
 
 -- | Frame
 -- TODO: note commnets.
@@ -159,8 +159,8 @@ type QUICVersion = Int32
 
 -- TODO: on LongPacket, Payload filed is not suitable. it will be removed.
 -- LongHeaderPacket should include the payload and LongHeaderPacket is renamed to good one.
-data Packet = LongPacket Header LongHeaderPayload
-            | ShortPacket Header ShortHeaderPayload
+data Packet = LongPacket  Header LongPacketPayload
+            | ShortPacket Header ShortPacketPayload
             deriving Show
 
 
