@@ -185,19 +185,19 @@ decodeFrame ctx bss = checkFrameType b
                           Bool ->       -- has body filed
                           ByteString -> -- payload body
                           QUICResult (Frame, ByteString)  -- a frame and rest payload or error code
-     decodeStreamFrame  hdr f ss oo d bs = case (Get.runGetOrFail decode'  $ LBS.fromStrict bs) of
+     decodeStreamFrame  ctx f ss oo d bs = case (Get.runGetOrFail decode  $ LBS.fromStrict bs) of
                                        (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                        _ -> Left QUICInvalidStreamData
 
         where
-           decode' :: Get.Get Frame
-           decode' = Stream <$> getStreamId ss <*> getOffset oo <*> ( len >>= getStreamData)
-
-           getStreamData :: Int -> Get.Get ByteString
-           getStreamData n = if f
-                             then return BS.empty
-                             else Get.getByteString $ fromIntegral n
-           len = if d then I.getInt16 else return 0
+           decode :: Get.Get Frame
+           decode = Stream  <$> getStreamId ss
+                            <*> getOffset oo
+                            <*> getStreamData d
+           getStreamData :: Bool -> Get.Get ByteString
+           getStreamData d = do
+             n <- if d then I.getInt16 else return 0
+             if n == 0 then return BS.empty else Get.getByteString $ fromIntegral n
 
      decodeAckFrame ctx n lack abl bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
