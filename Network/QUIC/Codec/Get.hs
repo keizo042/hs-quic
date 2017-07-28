@@ -33,8 +33,11 @@ getStreamId Stream4Byte = I.getInt32
 getConnectionId :: Get.Get ConnectionId
 getConnectionId = fromIntegral <$> I.getInt64
 
-getPacketNumber :: Get.Get PacketNumber
-getPacketNumber = undefined
+getPacketNumber :: PacketNumberSize ->  Get.Get PacketNumber
+getPacketNumber p = fromIntegral <$> case p of
+  PacketNumber1Byte -> I.getInt8
+  PacketNumber2Byte -> I.getInt16
+  PacketNumber4Byte -> I.getInt32
 
 -- | getErrorCode
 getErrorCode :: Get.Get ErrorCode
