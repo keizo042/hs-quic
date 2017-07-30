@@ -84,12 +84,11 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
         _                    -> Left QUICInvalidPacketHeader
       where
         getShortHeader :: Get.Get Header
-        getShortHeader = Get.getWord8 >>= d
+        getShortHeader = Get.getWord8 >>= get'
           where
             getConnIdMaybe w = if hasConn w then Just <$> getConnectionId else return Nothing
             hasConn w = w .|. 0x40 == 0x40
-            d w = ShortHeader <$> getConnIdMaybe w
-                              <*> getPacketNumber (toPacketNumberSize w)
+            get' w = ShortHeader <$> getConnIdMaybe w <*> getPacketNumber (toPacketNumberSize w)
 
 -- | decodeLongPacketPayload that it decode Payload with LongHeader.
 -- | it was chcked  payload type in Long Header prefix octet and parse rest of octet.
