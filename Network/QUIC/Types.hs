@@ -47,14 +47,14 @@ data LongHeaderType = VersionNegotiationType
                     deriving (Show, Eq)
 
 data LongPacketPayload = VersionNegotiation  QUICVersion [QUICVersion]
-                | ClientInitial
-                | ServerStatelessRetry
-                | ServerCleartext
-                | ClientCleartext
-                | ZeroRTTProtected
-                | OneRTTProtectedKeyPhaseZero
-                | OneRTTProtectedKeyPhaseOne
-                | PublicReset
+                | ClientInitial !ByteString
+                | ServerStatelessRetry !ByteString
+                | ServerCleartext !ByteString
+                | ClientCleartext !ByteString
+                | ZeroRTTProtected !ByteString
+                | OneRTTProtectedKeyPhaseZero !ByteString
+                | OneRTTProtectedKeyPhaseOne !ByteString
+                | PublicReset !ByteString
                 deriving (Show, Eq)
 
 -- | ShortPacketPayload
