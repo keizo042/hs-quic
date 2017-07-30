@@ -63,7 +63,7 @@ type ShortPacketPayload = [Frame]
 -- | Frame
 -- TODO: note commnets.
 data Frame = Stream !StreamId !Offset !ByteString
-           | Ack !(Maybe Int) !Int !PacketNumber !QUICTime !QUICTime !AckBlock !AckTimeStamp
+           | Ack !PacketNumber !QUICTime !AckBlock !AckTimeStamp
            | MaxData !Int64
            | MaxStreamData !StreamId !Int
            | MaxStreamId !StreamId

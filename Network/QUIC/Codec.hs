@@ -205,30 +205,40 @@ decodeFrame ctx bss = checkFrameType b
         where
           decode' :: Get.Get Frame
           decode' = getNumBlock >>= (\ nblock ->  getNTS >>= \ nts ->
-            Ack <$> getLAck lack <*> getAckBlocks nblock <*> getAckTimeStamp nts)
+            Ack <$> getLAck lack <*> getAckDelay <*> getAckBlocks nblock abl <*> getAckTimeStamps nts)
           getNumBlock = if n then Just <$> I.getInt8 else return Nothing
           getNTS = fromIntegral <$> Get.getWord8
+          getLAck :: LAckSize -> Get.Get PacketNumber
           getLAck lack =  fromIntegral <$> case lack of
                             LAck1Byte -> I.getInt8
                             LAck2Byte -> I.getInt16
                             LAck4Byte -> I.getInt32
                             LAck8Byte -> I.getInt64
-          getAckBlocks nblock = getAckBlockLength >>= (\ l ->
-              getAckBlock l)
-              where
-                getAckBlock n = undefined
+          getAckDelay = getQUICTime
+          getAckBlocks nblock abl = getAckBlockLength >>= (\ l -> getAckBlock abl l)
+            where
+              -- TODO: toPN that adhoc function to pass type checking
+              -- those  have same mean.
+              -- so AckBlockLengthSize should be changed as PacketNumberSize alias
+              toPN :: AckBlockLengthSize -> PacketNumberSize
+              toPN = undefined
+              getAckBlock abl n = do
+                pn   <-  getPacketNumber (toPN abl)
+                rest  <- getRest abl pn n
+                return $ AckBlock (pn : rest)
+                where
+                  getRest :: AckBlockLengthSize -> PacketNumber -> Int ->  Get.Get [PacketNumber]
+                  getRest abl pn 0 = return []
+                  getRest abl pn n = do
+                    diff <- getPacketNumber (toPN abl)
+                    let pn' = pn + diff
+                    rest <- getRest abl pn' (n - 1)
+                    return (pn' : rest)
+
           getAckBlockLength = case abl of
                                   AckBlock1Byte -> I.getInt8
                                   AckBlock2Byte -> I.getInt16
                                   AckBlock4Byte -> I.getInt32
-
-
-          getTimeStamps :: Int -> Get.Get AckTimeStamp
-          getTimeStamps 0   = return []
-          getTimeStamps nts = do
-            ts  <- getTimeStamp
-            tss <- getTimeStamps (nts - 1)
-            return (ts : tss)
 
      decodeMaxDataFrame  = f
         where
@@ -244,7 +254,7 @@ decodeFrame ctx bss = checkFrameType b
            (Right (rest, _, frm)) -> Right (frm, LBS.toStrict rest)
            _                      -> Left QUICInternalError
 
-          ss = undefined
+          ss = decodeContextStreamSize ctx
           decode' :: Get.Get Frame
           decode' = MaxStreamData <$> getStreamId ss <*> getMaxStreamData
           getMaxStreamData = fromIntegral <$> Get.getInt64be
@@ -255,7 +265,7 @@ decodeFrame ctx bss = checkFrameType b
            (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
            _                    -> Left QUICInternalError
 
-          ss = undefined
+          ss = decodeContextStreamSize ctx
           decode' :: Get.Get Frame
           decode' = MaxStreamId <$> getStreamId ss
 
@@ -269,18 +279,11 @@ decodeFrame ctx bss = checkFrameType b
          (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
          _                    -> Left QUICInternalError
 
-        ss = undefined
+        ss = decodeContextStreamSize ctx
         decode' :: Get.Get Frame
         decode' = StreamBlocked <$> getStreamId ss
 
-     decodeStreamIdNeededFrame ctx bs = f ctx bs
-      where
-          f ctx bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
-           (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-           _                    -> Left QUICInvalidStreamId
-
-          decode' :: Get.Get Frame
-          decode' = return StreamIdNeeded
+     decodeStreamIdNeededFrame ctx bs = Right (StreamIdNeeded, bs)
 
      decodeRstStreamFrame ctx bs = f ctx bs
       where
@@ -320,7 +323,7 @@ decodeFrame ctx bss = checkFrameType b
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInvalidGoawayData
         where
-          ss = undefined
+          ss = decodeContextStreamSize ctx
           decode' ::  Get.Get Frame
           decode' = Goaway <$> getStreamId ss <*> getStreamId ss
 
@@ -362,7 +365,9 @@ encodeLongPacketPayload ctx payload = f ctx payload
 encodeHeader :: Header -> ByteString
 encodeHeader (LongHeader typ c pn v) = LBS.toStrict $ Put.runPut $ p
   where
+    w = 0x80
     p = do
+      Put.putWord8 w
       putLongHeaderType typ
       putConnectionId c
       putPacketNumber pn
@@ -370,7 +375,9 @@ encodeHeader (LongHeader typ c pn v) = LBS.toStrict $ Put.runPut $ p
 
 encodeHeader (ShortHeader c pn)   = LBS.toStrict $ Put.runPut p
   where
+    w = 0x00
     p = do
+      Put.putWord8 w
       if Maybe.isJust c then putConnectionId $ Maybe.fromJust c else return ()
       putPacketNumber pn
 
@@ -382,14 +389,15 @@ encodeFrame ctx f = choice f
         where
           encodeStreamFrame s o bs = LBS.toStrict $ Put.runPut (p s o bs)
             where
-              p s o bs = putStreamId s >> putOffset o >> putBS (BS.length bs)  >> Put.putByteString bs
+              p s o bs = putStreamId s >> putOffset o >> putStreamData bs
               -- TODO: naming is adhoc.
-              putBS 0 = return ()
-              putBS i =  Put.putInt8 $ fromIntegral i
+              putStreamData bs = putStreamDataLength (BS.length bs) >> Put.putByteString bs
+              putStreamDataLength 0 = return ()
+              putStreamDataLength i = Put.putInt8 $ fromIntegral i
 
-      (Ack mi i pktn t0 t1 ablk stamps) -> undefined
+      (Ack lack delay blocks stamps) -> undefined
         where
-          encodeAckFrame mi i pn t0 t1 ablk stamps      =  LBS.toStrict . Put.runPut $ p pn
+          encodeAckFrame ctx  =  LBS.toStrict . Put.runPut $ undefined
             where
               p pn =  putPacketNumber pn
 
@@ -401,3 +409,4 @@ encodeFrame ctx f = choice f
     encoeMaxData        = undefined
     encodeMaxStreamData = undefined
     encodeMaxStreamId   = undefined
+    encodeConnectionClose = undefined

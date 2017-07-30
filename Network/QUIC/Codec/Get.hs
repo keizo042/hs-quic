@@ -12,11 +12,29 @@ import           Network.QUIC.Codec.Internal
 import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 
-getTimeStamp :: Get.Get AckTimeStamp
-getTimeStamp = undefined
+-- TODO: understanding Format
+getAckTimeStamps :: Int ->  Get.Get AckTimeStamp
+getAckTimeStamps n = do
+    delta0  <- getGap
+    stamp0  <- getQUICTime
+    rest    <- getAckTimeStamp n
+    return undefined
+  where
+    getGap = fromIntegral <$> I.getInt8
+
+    getAckTimeStamp :: Int -> Get.Get [(Gap, QUICTime)]
+    getAckTimeStamp 0 = return []
+    getAckTimeStamp n = do
+      gap <- getGap
+      diff   <- getQUICTime
+      rest <- getAckTimeStamp (n - 1)
+      return ((gap, diff) : rest)
 
 getQUICVersion :: Get.Get QUICVersion
 getQUICVersion = undefined
+
+getQUICTime :: Get.Get QUICTime
+getQUICTime = undefined
 
 getOffset :: OffsetSize -> Get.Get Offset
 getOffset NoExistOffset = return 0
