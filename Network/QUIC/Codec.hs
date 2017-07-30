@@ -33,7 +33,7 @@ decode bs = case (decodeHeader bs) of
     where
       checkHeader hdr =  case hdr of
         (ShortHeader _ _)    -> let ctx = undefined
-          in case (decodeWithShortHeader ctx bs') of
+          in case (decodeShortHeader ctx bs') of
             (Right payload) -> Right $ ShortPacket hdr payload
             (Left e)        -> Left e
         (LongHeader _ _ _ _) -> let ctx = undefined
@@ -41,16 +41,16 @@ decode bs = case (decodeHeader bs) of
             (Right (payload, bs'')) -> Right $ LongPacket hdr payload
             (Left e)                -> Left e
 
-      decodeWithShortHeader :: DecodeContext -> ByteString -> QUICResult ShortPacketPayload
-      decodeWithShortHeader ctx bs = decodeFrames ctx bs
+      decodeShortHeader :: DecodeContext -> ByteString -> QUICResult ShortPacketPayload
+      decodeShortHeader = decodeFrames
 
 
 decodeFrames :: DecodeContext -> ByteString -> QUICResult [Frame]
 decodeFrames ctx bs = case (decodeFrame ctx bs) of
   Left e        -> Left e
-  Right (f,bs') -> checkFrames ctx f bs
+  Right (f,bs') -> decodeFrames' ctx f bs
     where
-      checkFrames ctx f bs = case (decodeFrames ctx bs) of
+      decodeFrames' ctx f bs = case (decodeFrames ctx bs) of
          Right fs -> Right (f : fs)
          Left e   -> Left e
 
@@ -63,12 +63,12 @@ decodeHeader bs =  case (toHeaderType $ BS.head bs) of
    ShortHeaderType -> decodeShortHeader bs
   where
     decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeLongHeader bs = case (Get.runGetOrFail decode' $ LBS.fromStrict bs) of
+    decodeLongHeader bs = case (Get.runGetOrFail getLongHeader $ LBS.fromStrict bs) of
        Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
        _                    -> Left QUICInvalidPacketHeader
       where
-        decode' :: Get.Get Header
-        decode' = Get.getWord8 >>= (\w -> LongHeader <$> getHeaderType w
+        getLongHeader :: Get.Get Header
+        getLongHeader = Get.getWord8 >>= (\w -> LongHeader <$> getHeaderType w
                                    <*> getConnectionId
                                    <*> getPacketNumber PacketNumber4Byte
                                    <*> getQUICVersion)
@@ -103,12 +103,15 @@ decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
             decodeVersionNegotiation bs = case (Get.runGetOrFail getVersionNegotiation $ LBS.fromStrict bs) of
                (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
                (Left _) -> Left QUICInvalidVersionNegotiationPacket
-            getVersionNegotiation = VersionNegotiation <$> getQUICVersion <*> getVersions
-            getVersions =  Get.isEmpty >>= \ b -> if b
+            getVersionNegotiation :: Get.Get LongPacketPayload
+            getVersionNegotiation = VersionNegotiation <$> getQUICVersion <*> getQUICVersions
+
+            getQUICVersions :: Get.Get [QUICVersion]
+            getQUICVersions =  Get.isEmpty >>= \ b -> if b
                                                     then return []
                                                     else do
                                                       v <- getQUICVersion
-                                                      vs <- getVersions
+                                                      vs <- getQUICVersions
                                                       return (v:vs)
 
          ClientInitialType  -> decodeClientInitial bs
@@ -116,6 +119,7 @@ decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
            decodeClientInitial  bs = case (Get.runGetOrFail getClientInitial $ LBS.fromStrict bs) of
                 (Right (bs', _, d)) -> Right (d, LBS.toStrict bs')
                 _                   -> Left QUICInternalError -- TODO: maybe there are proper error.
+           getClientInitial :: Get.Get LongPacketPayload
            getClientInitial         = undefined
 
          ServerStatelessRetryType -> decodeServerStatelessRetry bs
@@ -210,9 +214,7 @@ decodeFrame ctx bss = checkFrameType b
 
         where
            getStreamFrame :: Get.Get Frame
-           getStreamFrame = Stream  <$> getStreamId ss
-                            <*> getOffset oo
-                            <*> getStreamData d
+           getStreamFrame = Stream  <$> getStreamId ss <*> getOffset oo <*> getStreamData d
            getStreamData :: Bool -> Get.Get ByteString
            getStreamData d = do
              n <- if d then I.getInt16 else return 0
@@ -225,7 +227,9 @@ decodeFrame ctx bss = checkFrameType b
           getAckFrame  :: Get.Get Frame
           getAckFrame = getNumBlock >>= (\ nblock ->  getNTS >>= \ nts ->
             Ack <$> getLAck lack <*> getAckDelay <*> getAckBlocks nblock abl <*> getAckTimeStamps nts)
+          getNumBlock :: Get.Get (Maybe Int)
           getNumBlock = if n then Just <$> I.getInt8 else return Nothing
+          getNTS :: Get.Get Int
           getNTS = fromIntegral <$> Get.getWord8
           getLAck :: LAckSize -> Get.Get PacketNumber
           getLAck lack =  fromIntegral <$> case lack of
