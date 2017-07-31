@@ -407,17 +407,17 @@ encodeFrame ctx f = choice f
 
     encodeMaxDataFrame i = Put.runPut $ putMaxDataFrame i
       where
-        putMaxDataFrame = undefined
+        putMaxDataFrame i = undefined
 
     encodeMaxStreamDataFrame sid size = Put.runPut $ putMaxStreamDataFrame sid size
       where
         putMaxStreamDataFrame = undefined
 
-    encodeMaxStreamIdFrame (MaxStreamId sid)   = Put.runPut $ putMaxStreamIdFrame sid
+    encodeMaxStreamIdFrame sid = Put.runPut $ putMaxStreamIdFrame sid
       where
-        putMaxStreamIdFrame = undefined
+        putMaxStreamIdFrame sid = putStreamId sid
 
     encodeConnectionCloseFrame (ConnectionClose ecode msg) = Put.runPut $ putConnectionCloseFrame ecode msg
       where
         putConnectionCloseFrame :: ErrorCode -> ByteString -> Put.Put
-        putConnectionCloseFrame = undefined
+        putConnectionCloseFrame e bs = putErrorCode e >> Put.putInt16be ( fromIntegral $ BS.length bs) >> Put.putByteString bs
