@@ -58,10 +58,10 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ l -> getAckBlock abl l)
 
 
 getQUICVersion :: Get.Get QUICVersion
-getQUICVersion = undefined
+getQUICVersion = fromIntegral <$> I.getInt32
 
 getQUICTime :: Get.Get QUICTime
-getQUICTime = undefined
+getQUICTime = QUICTime <$> Get.getInt16be
 
 getOffset :: OffsetSize -> Get.Get Offset
 getOffset NoExistOffset = return 0

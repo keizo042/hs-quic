@@ -142,6 +142,7 @@ fromFrameType (StreamType f ss oo d) = 0xa0 - 0xbf
 
     adata True  = 0x01
     adata False = 0x00
+
 fromFrameType (AckType n ll mm) =  0xc0 - 0xff
                               .|. nblock n
                               .|. len ll
