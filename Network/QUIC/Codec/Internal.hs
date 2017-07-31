@@ -106,7 +106,7 @@ toFrameType w = case (w .&. 0x1f) of
                                        0x00 -> AckBlock1Byte
                                        0x01 -> AckBlock2Byte
                                        0x02 -> AckBlock4Byte
-                                       0x03 -> AckBlock8Byte
+                                       0x03 -> AckBlock6Byte
 
 -- | fromFrameType
 fromFrameType :: FrameType -> Word8
@@ -158,7 +158,7 @@ fromFrameType (AckType n ll mm) =  0xc0 - 0xff
     ablk AckBlock1Byte = 0x00
     ablk AckBlock2Byte = 0x01
     ablk AckBlock4Byte = 0x02
-    ablk AckBlock8Byte = 0x03
+    ablk AckBlock6Byte = 0x03
 
 -- | hasConnectionId check existing ConnectionId Flag in Header.
 hasConnectionId :: Word8 -> Bool

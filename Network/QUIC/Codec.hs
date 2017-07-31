@@ -220,16 +220,18 @@ decodeFrame ctx bss = checkFrameType b
              n <- if d then I.getInt16 else return 0
              if n == 0 then return BS.empty else Get.getByteString $ fromIntegral n
 
-     decodeAckFrame ctx n lack abl bs = case (Get.runGetOrFail getAckFrame $ LBS.fromStrict bs) of
+     decodeAckFrame ctx n lack abl bs = case (Get.runGetOrFail (getAckFrame n lack abl) $ LBS.fromStrict bs) of
                                    (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
                                    _ -> Left QUICInvalidAckData
         where
-          getAckFrame  :: Get.Get Frame
-          getAckFrame = getNumBlock >>= (\ nblock ->  getNTS >>= \ nts ->
-            Ack <$> getLAck lack <*> getAckDelay <*> getAckBlocks nblock abl <*> getAckTimeStamps nts)
-          getNumBlock :: Get.Get (Maybe Int)
-          getNumBlock = if n then Just <$> I.getInt8 else return Nothing
-          getNTS :: Get.Get Int
+          getAckFrame  :: Bool -> LAckSize -> AckBlockLengthSize -> Get.Get Frame
+          getAckFrame n lack abl = getNumBlock n >>= (\ nblock ->  getNTS >>= \ nstamps -> getLAck lack >>= \ l ->
+            Ack l <$> getAckDelay <*> getAckBlocksMaybe nblock abl <*> getAckTimeStamps l nstamps )
+          getAckBlocksMaybe Nothing abl         =   return Nothing
+          getAckBlocksMaybe (Just nblocks) abl  = Just <$> getAckBlocks nblocks abl
+          getNumBlock :: Bool -> Get.Get (Maybe Int)
+          getNumBlock n = if n then Just <$> I.getInt8 else return Nothing
+          getNTS :: Get.Get Integer
           getNTS = fromIntegral <$> Get.getWord8
           getLAck :: LAckSize -> Get.Get PacketNumber
           getLAck lack =  fromIntegral <$> case lack of
@@ -238,30 +240,6 @@ decodeFrame ctx bss = checkFrameType b
                             LAck4Byte -> I.getInt32
                             LAck8Byte -> I.getInt64
           getAckDelay = getQUICTime
-          getAckBlocks nblock abl = getAckBlockLength >>= (\ l -> getAckBlock abl l)
-            where
-              -- TODO: toPN that adhoc function to pass type checking
-              -- those  have same mean.
-              -- so AckBlockLengthSize should be changed as PacketNumberSize alias
-              toPN :: AckBlockLengthSize -> PacketNumberSize
-              toPN = undefined
-              getAckBlock abl n = do
-                pn   <-  getPacketNumber (toPN abl)
-                rest  <- getRest abl pn n
-                return $ AckBlock (pn : rest)
-                where
-                  getRest :: AckBlockLengthSize -> PacketNumber -> Int ->  Get.Get [PacketNumber]
-                  getRest abl pn 0 = return []
-                  getRest abl pn n = do
-                    diff <- getPacketNumber (toPN abl)
-                    let pn' = pn + diff
-                    rest <- getRest abl pn' (n - 1)
-                    return (pn' : rest)
-
-          getAckBlockLength = case abl of
-                                  AckBlock1Byte -> I.getInt8
-                                  AckBlock2Byte -> I.getInt16
-                                  AckBlock4Byte -> I.getInt32
 
      decodeMaxDataFrame  = f
         where
@@ -353,15 +331,9 @@ decodeFrame ctx bss = checkFrameType b
 
 
 -- | encode is a API to encode to Packet of QUIC.
-encode :: Packet -> ByteString
-encode (LongPacket hdr payload) = encodeHeader hdr `BS.append` encodeLongPacketPayload ctx payload
-   where
-     ctx :: EncodeContext
-     ctx = undefined
-encode (ShortPacket hdr payload)  = encodeHeader hdr `BS.append` encodeFrames ctx payload
-   where
-     ctx :: EncodeContext
-     ctx = undefined
+encode :: EncodeContext -> Packet -> ByteString
+encode ctx (LongPacket hdr payload) = encodeHeader hdr `BS.append` encodeLongPacketPayload ctx payload
+encode ctx (ShortPacket hdr payload)  = encodeHeader hdr `BS.append` encodeFrames ctx payload
 
 
 encodeFrames :: EncodeContext -> [Frame] -> ByteString

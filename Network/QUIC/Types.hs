@@ -63,7 +63,7 @@ type ShortPacketPayload = [Frame]
 -- | Frame
 -- TODO: note commnets.
 data Frame = Stream !StreamId !Offset !ByteString
-           | Ack !PacketNumber !QUICTime !AckBlock !AckTimeStamp
+           | Ack !PacketNumber !QUICTime !(Maybe AckBlock) !AckTimeStamp
            | MaxData !Int64
            | MaxStreamData !StreamId !Int
            | MaxStreamId !StreamId
@@ -148,7 +148,7 @@ data AckBlock = AckBlock [PacketNumber]
 type Gap = Int
 
 -- | AckTimeStamp is TimeStamp represent in Ack Frame.
-data AckTimeStamp = AckTimeStamp [(Gap, QUICTime)]
+data AckTimeStamp = AckTimeStamp [(PacketNumber, QUICTime)]
                   deriving Show
 
 type PacketNumber = Integer
