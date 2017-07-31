@@ -103,7 +103,7 @@ data LAckSize = LAck1Byte | LAck2Byte | LAck4Byte | LAck8Byte
                 deriving (Show, Eq)
 
 -- | Internal use
-data AckBlockLengthSize = AckBlock1Byte | AckBlock2Byte | AckBlock4Byte | AckBlock8Byte
+data AckBlockLengthSize = AckBlock1Byte | AckBlock2Byte | AckBlock4Byte | AckBlock6Byte
                 deriving (Show, Eq)
 
 -- | FrameType is for internal use.

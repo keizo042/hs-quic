@@ -208,38 +208,13 @@ decodeFrame ctx bss = checkFrameType b
                           Bool ->       -- has body filed
                           ByteString -> -- payload body
                           QUICResult (Frame, ByteString)  -- a frame and rest payload or error code
-     decodeStreamFrame  ctx f ss oo d bs = case (Get.runGetOrFail getStreamFrame  $ LBS.fromStrict bs) of
-                                       (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                       _ -> Left QUICInvalidStreamData
-
-        where
-           getStreamFrame :: Get.Get Frame
-           getStreamFrame = Stream  <$> getStreamId ss <*> getOffset oo <*> getStreamData d
-           getStreamData :: Bool -> Get.Get ByteString
-           getStreamData d = do
-             n <- if d then I.getInt16 else return 0
-             if n == 0 then return BS.empty else Get.getByteString $ fromIntegral n
+     decodeStreamFrame  ctx f ss oo d bs = case (Get.runGetOrFail (getStreamFrame ctx f ss oo d )  $ LBS.fromStrict bs) of
+         (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+         _                    -> Left QUICInvalidStreamData
 
      decodeAckFrame ctx n lack abl bs = case (Get.runGetOrFail (getAckFrame n lack abl) $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInvalidAckData
-        where
-          getAckFrame  :: Bool -> LAckSize -> AckBlockLengthSize -> Get.Get Frame
-          getAckFrame n lack abl = getNumBlock n >>= (\ nblock ->  getNTS >>= \ nstamps -> getLAck lack >>= \ l ->
-            Ack l <$> getAckDelay <*> getAckBlocksMaybe nblock abl <*> getAckTimeStamps l nstamps )
-          getAckBlocksMaybe Nothing abl         =   return Nothing
-          getAckBlocksMaybe (Just nblocks) abl  = Just <$> getAckBlocks nblocks abl
-          getNumBlock :: Bool -> Get.Get (Maybe Int)
-          getNumBlock n = if n then Just <$> I.getInt8 else return Nothing
-          getNTS :: Get.Get Integer
-          getNTS = fromIntegral <$> Get.getWord8
-          getLAck :: LAckSize -> Get.Get PacketNumber
-          getLAck lack =  fromIntegral <$> case lack of
-                            LAck1Byte -> I.getInt8
-                            LAck2Byte -> I.getInt16
-                            LAck4Byte -> I.getInt32
-                            LAck8Byte -> I.getInt64
-          getAckDelay = getQUICTime
+         (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
+         _                    -> Left QUICInvalidAckData
 
      decodeMaxDataFrame  = f
         where
