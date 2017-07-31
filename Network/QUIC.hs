@@ -19,11 +19,11 @@ import qualified Network.Socket        as S
 import qualified Network.TLS           as TLS
 
 
-upperLimitMaxPacketSize :: Int -> Bool
-upperLimitMaxPacketSize i = i < 65527
-
-lowerLimitMaxPacketSize :: Int -> Bool
-lowerLimitMaxPacketSize i = i > 1252
+limitPMTU :: Int -> Bool
+limitPMTU i = upper i && lower i
+      where
+  upper i = i < 65527
+  lower i = i > 1252
 
 -- the number that library support protocol version.
 supportedVersions :: [QUICVersion]
