@@ -15,7 +15,7 @@ import           Data.Bits
 import           Data.Int
 
 newtype UFloat16 = UFloat16 Int16
-                   deriving (Eq, Bits, Enum, Ord, Integral,Num, Real)
+                   deriving (Show, Eq, Bits, Enum, Ord, Integral,Num, Real)
 
 absUFloat16 uf = encode $ abs $ decode uf
 
