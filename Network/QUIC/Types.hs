@@ -10,6 +10,7 @@ import           Data.Default.Class
 import           Data.Int
 import qualified Data.Time.Clock    as Clock
 
+import           Network.QUIC.UFloat16
 
 -- | QUICResult is result type in the QUIC protocol context.
 type QUICResult a = Either QUICError a
@@ -63,7 +64,7 @@ type ShortPacketPayload = [Frame]
 -- | Frame
 -- TODO: note commnets.
 data Frame = Stream !StreamId !Offset !ByteString
-           | Ack !PacketNumber !QUICTime !(Maybe AckBlock) !AckTimeStamp
+           | Ack !PacketNumber !(Maybe QUICTime) !(Maybe AckBlock) !AckTimeStamp
            | MaxData !Int64
            | MaxStreamData !StreamId !Int
            | MaxStreamId !StreamId
@@ -133,11 +134,11 @@ type Offset = Integer
 -- TODO: See [draft-ietf-quic-transport-04] Section 8.2.2.1 "Time Format"
 -- We Must implement IEEE74 like time format and the utility.
 -- 16bit unsinged float.
+-- with
 -- mantissa 11 bit
 -- exponent 5 bit
 -- time in microseconds
-data QUICTime = QUICTime Int16 -- QUICTime Int Int
-             deriving Show
+type QUICTime =  Int32
 
 -- | AckBlock is Blocks that is recived  in Ack Frame.
 data AckBlock = AckBlock [PacketNumber]
@@ -150,6 +151,8 @@ type Gap = Int
 -- | AckTimeStamp is TimeStamp represent in Ack Frame.
 data AckTimeStamp = AckTimeStamp [(PacketNumber, QUICTime)]
                   deriving Show
+
+type AckTimeDelta = UFloat16
 
 type PacketNumber = Integer
 

@@ -11,6 +11,7 @@ import           Data.Int
 import           Network.QUIC.Codec.Internal
 import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
+import qualified Network.QUIC.UFloat16
 
 -- | getAckTimeStamps
 getAckTimeStamps :: PacketNumber  -- Largest Acked
