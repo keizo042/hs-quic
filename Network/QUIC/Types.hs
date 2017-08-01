@@ -10,6 +10,7 @@ import           Data.Default.Class
 import           Data.Int
 import qualified Data.Time.Clock       as Clock
 
+import           Network.QUIC.Time
 import           Network.QUIC.UFloat16
 
 -- | QUICResult is result type in the QUIC protocol context.
@@ -130,15 +131,7 @@ type StreamId = Int
 -- | Offset is type that indicate offset from Head of Data in Stream Frame
 type Offset = Integer
 
--- | QUICTime
--- TODO: See [draft-ietf-quic-transport-04] Section 8.2.2.1 "Time Format"
--- We Must implement IEEE74 like time format and the utility.
--- 16bit unsinged float.
--- with
--- mantissa 11 bit
--- exponent 5 bit
--- time in microseconds
-type QUICTime =  Int32
+-- QUICTime is moved to Network.QUIC.Time module
 
 -- | AckBlock is Blocks that is recived  in Ack Frame.
 data AckBlock = AckBlock [PacketNumber]

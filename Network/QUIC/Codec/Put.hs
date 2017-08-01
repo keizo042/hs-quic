@@ -74,4 +74,3 @@ putPaddingFrame = Put.putByteString $ BS.singleton 0x60
 
 putMaxStreamIdFrame :: StreamId -> Put.Put
 putMaxStreamIdFrame sid = putStreamId sid
-

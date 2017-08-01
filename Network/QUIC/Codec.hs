@@ -23,6 +23,7 @@ import           Data.Word                   (Word8)
 
 import           Network.QUIC
 import qualified Network.QUIC.Internal       as I
+import           Network.QUIC.Time
 import           Network.QUIC.Types
 
 
