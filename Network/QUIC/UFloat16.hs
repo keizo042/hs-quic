@@ -15,21 +15,22 @@ import           Data.Bits
 import           Data.Int
 
 newtype UFloat16 = UFloat16 Int16
-                   deriving (Eq,Bits)
+                   deriving (Eq, Bits, Enum, Ord, Integral,Num, Real)
 
-absUFloat16 = decode . abs . encode
+absUFloat16 uf = encode $ abs $ decode uf
 
 addUFloat16 :: UFloat16 -> UFloat16 -> UFloat16
-addUFloat16 l r = encode $ decode l + decode r
+addUFloat16 l r = encode $ l' + r'
+  where
+    l' = decode l
+    r' = decode r
 
 subUFloat16 :: UFloat16 -> UFloat16 -> UFloat16
-subUFloat16 l r = encode $ decode l - decode r
+subUFloat16 l r = encode $ l' - r'
+  where
+    l' = decode l
+    r' = decode r
 
-divUFloat16 :: UFloat16 -> UFloat16 -> UFloat16
-divUFloat16 l r = encode $ decode l / encode r
-
-mutliUFloat16 :: UFloat16 -> UFloat16 -> UFloat16
-mutliUFloat16 l r = encode $ decode l * decode r
 
 maxUFloat :: UFloat16
 maxUFloat = 0xFFFF
@@ -38,14 +39,15 @@ maxUFloatAsUINT64 :: Int
 maxUFloatAsUINT64 = 0x3FFC0000000
 
 encode :: Int -> UFloat16
-encode n = fromIntegral $ if n < (1 `shiftL` 12)
-             then n
-             else if n > maxUFLoat
-                then maxUFloat
-                else (n `shiftR` p) + (p `shiftL` 11)
-                  where
-                    p =  log2Floor $ fromIntegral n
+encode n = if n < (1 `shiftL` 12) then fromIntegral n else v
+          where
+            v :: UFloat16
+            v   = if (n > (fromIntegral maxUFloat)) then maxUFloat else v'
+            v' :: UFloat16
+            v'  = fromIntegral $ (n `shiftR` p) + (p `shiftL` 11)
+            p   =  log2Floor $ fromIntegral n
 
+log2Floor :: Int -> Int
 log2Floor i = debrujin A.! (x `shiftR` 27)
   where
     x = i .|. i `shiftR` 1
@@ -59,10 +61,13 @@ log2Floor i = debrujin A.! (x `shiftR` 27)
             8, 12, 20, 28, 15, 17, 24, 7,
             19, 27, 23, 6, 26, 5, 4, 31 ]
 
-decode :: UFloat16 -> Int64
-decode v = fromIntegral $ if v < (1 `shiftL` 12)
-             then v
-             else m `shiftL` (fromIntegral p)
+decode :: UFloat16 -> Int
+decode v = if v < (1 `shiftL` 12) then fromIntegral v else i
              where
-               p = (v `shiftR` 11) - 1
-               m = v - (p `shiftL` 11)
+               v' :: Int
+               v' = fromIntegral v
+               i :: Int
+               i = m `shiftL` p
+               m = v' - (p `shiftL` 11)
+               p :: Int
+               p = (v' `shiftR` 11) - 1
