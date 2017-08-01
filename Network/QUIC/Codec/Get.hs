@@ -18,6 +18,14 @@ import qualified Network.QUIC.UFloat16
 getQUICVersion :: Get.Get QUICVersion
 getQUICVersion = fromIntegral <$> I.getInt32
 
+getQUICVersions :: Get.Get [QUICVersion]
+getQUICVersions =  Get.isEmpty >>= \ b -> if b then return [] else get
+  where
+     get = do
+        v <- getQUICVersion
+        vs <- getQUICVersions
+        return (v:vs)
+
 getQUICTime :: Get.Get QUICTime
 getQUICTime = fromIntegral <$> Get.getInt32be
 

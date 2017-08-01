@@ -13,6 +13,9 @@ import           Data.Word
 --
 --
 
+toDecodeContext :: Header -> DecodeContext
+toDecodeContext h = undefined
+
 -- | toHeaderType check Long or Short Header.
 toHeaderType :: Word8 -> HeaderType
 toHeaderType b
