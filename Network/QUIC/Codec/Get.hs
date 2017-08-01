@@ -66,8 +66,8 @@ getAckFrame n lack abl = getNumBlock n >>=
   Ack l <$> getAckDelay <*> getAckBlocksMaybe nblock abl <*> getAckTimeStamps l nstamps
   where
     getAckBlocksMaybe :: Maybe Int -> AckBlockLengthSize -> Get.Get AckBlock
-    getAckBlocksMaybe Nothing abl        =   return Nothing
-    getAckBlocksMaybe (Just nblocks) abl = Just <$> getAckBlocks nblocks abl
+    getAckBlocksMaybe Nothing abl        =  getAckBlocks 0 abl
+    getAckBlocksMaybe (Just nblocks) abl =  getAckBlocks nblocks abl
 
     getNumBlock :: Bool -> Get.Get (Maybe Int)
     getNumBlock n = if n then Just <$> I.getInt8 else return Nothing
@@ -85,8 +85,8 @@ getAckFrame n lack abl = getNumBlock n >>=
 -- ref :https://github.com/quicwg/base-drafts/issues/109
 -- reference implementation :
 -- https://gist.github.com/mikkelfj/64deb01b86d68f3d7aacff4b113c22d8
-getAckDelay :: Get.Get (Maybe AckTimeDelta)
-getAckDelay = Just <$> parse <$> Get.getInt16be
+getAckDelay :: Get.Get  AckTimeDelta
+getAckDelay = parse <$> Get.getInt16be
   where
     parse = undefined
 
@@ -126,17 +126,20 @@ getAckTimeStamps :: PacketNumber  -- Largest Acked
 getAckTimeStamps lack n = do
     delta0  <- getDelta
     stamp0  <- getQUICTime
-    rest    <- getAckTimeStamp lack (n - 1)
+    rest    <- getAckTimeStamp lack stamp0 (n - 1)
     let first = (lack - delta0, stamp0)
     return $ AckTimeStamp (first : rest)
   where
     getDelta = fromIntegral <$> I.getInt8
     getQUICTimeDelta = getAckDelay
+    addQUICTimeDelta :: QUICTime -> AckTimeDelta -> QUICTime
+    addQUICTimeDelta time delta = undefined
 
-    getAckTimeStamp :: PacketNumber -> Integer -> Get.Get [(PacketNumber, QUICTime)]
-    getAckTimeStamp _ 0 = return []
-    getAckTimeStamp lack n = do
+    getAckTimeStamp :: PacketNumber -> QUICTime -> Integer -> Get.Get [(PacketNumber, QUICTime)]
+    getAckTimeStamp _     time 0 = return []
+    getAckTimeStamp lack  time n = do
       gap <- getDelta
       diff <- getQUICTimeDelta
-      rest <- getAckTimeStamp lack (n - 1)
-      return ((lack - gap, diff) : rest)
+      let time' = addQUICTimeDelta time diff
+      rest <- getAckTimeStamp lack time' (n - 1)
+      return ((lack - gap, time') : rest)

@@ -25,24 +25,26 @@ import           Network.QUIC
 import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 
+
+toDecodeContext :: Header -> DecodeContext
+toDecodeContext h = undefined
+
 -- | decode is a API to decode Packet of QUIC.
 decode :: ByteString -> QUICResult Packet
-decode bs = case (decodeHeader bs) of
-  Left e           -> Left e
-  Right (hdr, bs') -> checkHeader hdr
+decode bs = decodeHeader bs >>= \ (hdr, bs') -> decodePayload hdr bs'
     where
-      checkHeader hdr =  case hdr of
-        (ShortHeader _ _)    -> let ctx = undefined
-          in case (decodeShortHeader ctx bs') of
-            (Right payload) -> Right $ ShortPacket hdr payload
-            (Left e)        -> Left e
-        (LongHeader _ _ _ _) -> let ctx = undefined
-          in case (decodeLongPacketPayload ctx bs') of
-            (Right (payload, bs'')) -> Right $ LongPacket hdr payload
-            (Left e)                -> Left e
+      decodePayload hdr bs =  case hdr of
+        (ShortHeader _ _)    -> decodeShortPacket (toDecodeContext hdr) hdr bs
+        (LongHeader _ _ _ _) -> decodeLongPacket (toDecodeContext hdr)  hdr bs
 
-      decodeShortHeader :: DecodeContext -> ByteString -> QUICResult ShortPacketPayload
-      decodeShortHeader = decodeFrames
+      decodeShortPacket :: DecodeContext -> Header -> ByteString -> QUICResult Packet
+      decodeShortPacket ctx hdr bs = case (decodeFrames ctx bs) of
+                                       (Right p) -> Right $ ShortPacket hdr p
+                                       (Left e)  -> (Left e)
+
+      decodeLongPacket ctx hdr bs = case (decodeLongPacketPayload ctx bs) of
+            (Right (payload, bs')) -> Right $ LongPacket hdr payload
+            (Left e)               -> Left e
 
 
 decodeFrames :: DecodeContext -> ByteString -> QUICResult [Frame]
@@ -155,35 +157,35 @@ decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
           where
             decodeOneRTTProtectedKeyPhaseZero bs = case (Get.runGetOrFail getOneRTTProtectedKeyPhaseZero $ LBS.fromStrict bs) of
               (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> undefined
+              _                   -> Left QUICInternalError
             getOneRTTProtectedKeyPhaseZero    = undefined
 
          OneRTTProctectedKeyPhaseOneType -> decodeOneRTTPRotectedKeyPhaseOne bs
           where
             decodeOneRTTPRotectedKeyPhaseOne bs  = case (Get.runGetOrFail getOneRTTProtectedKeyPhaseOne $ LBS.fromStrict bs) of
               (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> undefined
+              _                   -> Left QUICInternalError
             getOneRTTProtectedKeyPhaseOne     = undefined
 
          PublicResetType                 -> decodePublicReset bs
           where
             decodePublicReset bs = case (Get.runGetOrFail getPublicReset $ LBS.fromStrict bs) of
               (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> undefined
+              _                   -> Left QUICInvalidPublicReset
             getPublicReset = undefined
 
 decodeFrame :: DecodeContext -> ByteString -> QUICResult (Frame, ByteString)
-decodeFrame ctx bss = checkFrameType b
+decodeFrame ctx bss = decodeFrameType b >>= \ ft -> decodeFrame0 ctx ft bs
     where
      (b, bs) = (BS.head bss, BS.tail bss)
 
-
-     checkFrameType :: Word8 -> QUICResult (Frame, ByteString)
-     checkFrameType b = case (toFrameType b) of
+     decodeFrameType :: Word8 -> QUICResult FrameType
+     decodeFrameType b = case (toFrameType b) of
         Nothing -> Left QUICInvalidFrameData
-        Just ft -> choiceDecoder ft
+        Just ft -> Right ft
 
-     choiceDecoder ft = case ft of
+     decodeFrame0 :: DecodeContext -> FrameType ->  ByteString -> QUICResult (Frame, ByteString)
+     decodeFrame0 ctx ft bs  = case ft of
        MaxDataType            -> decodeMaxDataFrame bs
        PaddingType            -> decodePaddingFrame bs
        PingType               -> decodePingFrame    bs
