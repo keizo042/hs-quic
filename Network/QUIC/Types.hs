@@ -1,14 +1,14 @@
 module Network.QUIC.Types
   where
 
-import qualified Data.Binary        as B
-import qualified Data.Binary.Get    as Get
-import qualified Data.Binary.Put    as Put
+import qualified Data.Binary           as B
+import qualified Data.Binary.Get       as Get
+import qualified Data.Binary.Put       as Put
 import           Data.Bits
-import           Data.ByteString    (ByteString)
+import           Data.ByteString       (ByteString)
 import           Data.Default.Class
 import           Data.Int
-import qualified Data.Time.Clock    as Clock
+import qualified Data.Time.Clock       as Clock
 
 import           Network.QUIC.UFloat16
 
