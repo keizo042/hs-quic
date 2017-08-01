@@ -26,6 +26,7 @@ library
                        Network.QUIC.Connection
                        Network.QUIC.Manager
                        Network.QUIC.Priority
+                       Network.QUIC.UFloat16
   build-depends:       base >= 4.7 && < 5,
                        bytestring,
                        async, 
@@ -36,6 +37,7 @@ library
                        containers,
                        tls,
                        cryptonite,
+                       array,
                        data-default-class
   default-language:    Haskell2010
 
