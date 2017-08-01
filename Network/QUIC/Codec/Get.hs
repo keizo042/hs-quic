@@ -13,60 +13,13 @@ import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 import qualified Network.QUIC.UFloat16
 
--- | getAckTimeStamps
-getAckTimeStamps :: PacketNumber  -- Largest Acked
-                -> Integer            -- Delta Largest Acked
-                ->  Get.Get AckTimeStamp
-getAckTimeStamps lack n = do
-    delta0  <- getDelta
-    stamp0  <- getQUICTime
-    rest    <- getAckTimeStamp (n - 1) lack
-    let first = (lack - delta0, stamp0)
-    return $ AckTimeStamp (first : rest)
-  where
-    getDelta = fromIntegral <$> I.getInt8
-
-    getAckTimeStamp :: PacketNumber -> Integer -> Get.Get [(PacketNumber, QUICTime)]
-    getAckTimeStamp _ 0 = return []
-    getAckTimeStamp lack n = do
-      gap <- getDelta
-      diff <- getQUICTime
-      rest <- getAckTimeStamp lack (n - 1)
-      return ((lack - gap, diff) : rest)
-
--- | getAckBlocks
-getAckBlocks :: Int -> AckBlockLengthSize -> Get.Get AckBlock
-getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl first)
-  where
-    getAckBlockLength :: AckBlockLengthSize -> Get.Get Integer
-    getAckBlockLength abl = fromIntegral <$> case abl of
-                            AckBlock1Byte -> I.getInt8
-                            AckBlock2Byte -> I.getInt16
-                            AckBlock4Byte -> I.getInt32
-                            AckBlock6Byte -> I.getInt48
-    getAckBlock abl first = do
-      pn0   <-  getAckBlockLength abl
-      rest  <- getRestBlock abl (pn0 - first)
-      return $ AckBlock ( [pn0, pn0-1.. pn0 - first ] ++  rest )
-      where
-        getGap = fromIntegral <$> I.getInt8
-        getRestBlock :: AckBlockLengthSize -> PacketNumber ->  Get.Get [PacketNumber]
-        getRestBlock abl pn
-          | (pn <= 0) = return []
-          | otherwise = do
-          gap <- getGap
-          len <- getAckBlockLength abl
-          rest <- getRestBlock abl (pn - gap - len)
-          let pn' = pn - len
-              cont =  [pn',pn'-1..(pn'- len)]
-          return (cont ++ rest)
 
 
 getQUICVersion :: Get.Get QUICVersion
 getQUICVersion = fromIntegral <$> I.getInt32
 
 getQUICTime :: Get.Get QUICTime
-getQUICTime = QUICTime <$> Get.getInt16be
+getQUICTime = fromIntegral <$> Get.getInt32be
 
 getOffset :: OffsetSize -> Get.Get Offset
 getOffset NoExistOffset = return 0
@@ -104,23 +57,86 @@ getStreamFrame ctx f ss oo d = Stream  <$> getStreamId ss <*> getOffset oo <*> g
      n <- if d then I.getInt16 else return 0
      if n == 0 then return BS.empty else Get.getByteString $ fromIntegral n
 
-
 -- | getAckFrame
 getAckFrame  :: Bool -> LAckSize -> AckBlockLengthSize -> Get.Get Frame
-getAckFrame n lack abl = getNumBlock n >>= (\ nblock ->  getNTS >>= \ nstamps -> getLAck lack >>= \ l ->
-  Ack l <$> getAckDelay <*> getAckBlocksMaybe nblock abl <*> getAckTimeStamps l nstamps )
+getAckFrame n lack abl = getNumBlock n >>=
+                        \ nblock ->  getNTS >>=
+                        \ nstamps -> getLAck lack >>=
+                        \ l ->
+  Ack l <$> getAckDelay <*> getAckBlocksMaybe nblock abl <*> getAckTimeStamps l nstamps
   where
-  getAckBlocksMaybe Nothing abl        =   return Nothing
-  getAckBlocksMaybe (Just nblocks) abl = Just <$> getAckBlocks nblocks abl
-  getNumBlock :: Bool -> Get.Get (Maybe Int)
-  getNumBlock n = if n then Just <$> I.getInt8 else return Nothing
-  getNTS :: Get.Get Integer
-  getNTS = fromIntegral <$> Get.getWord8
-  getLAck :: LAckSize -> Get.Get PacketNumber
-  getLAck lack =  fromIntegral <$> case lack of
-                    LAck1Byte -> I.getInt8
-                    LAck2Byte -> I.getInt16
-                    LAck4Byte -> I.getInt32
-                    LAck8Byte -> I.getInt64
-  getAckDelay = getQUICTime
+    getAckBlocksMaybe :: Maybe Int -> AckBlockLengthSize -> Get.Get AckBlock
+    getAckBlocksMaybe Nothing abl        =   return Nothing
+    getAckBlocksMaybe (Just nblocks) abl = Just <$> getAckBlocks nblocks abl
 
+    getNumBlock :: Bool -> Get.Get (Maybe Int)
+    getNumBlock n = if n then Just <$> I.getInt8 else return Nothing
+    getNTS :: Get.Get Integer
+    getNTS = fromIntegral <$> Get.getWord8
+    getLAck :: LAckSize -> Get.Get PacketNumber
+    getLAck lack =  fromIntegral <$> case lack of
+                      LAck1Byte -> I.getInt8
+                      LAck2Byte -> I.getInt16
+                      LAck4Byte -> I.getInt32
+                      LAck8Byte -> I.getInt64
+
+-- | getAckDelay
+-- TODO:  Time Format
+-- ref :https://github.com/quicwg/base-drafts/issues/109
+-- reference implementation :
+-- https://gist.github.com/mikkelfj/64deb01b86d68f3d7aacff4b113c22d8
+getAckDelay :: Get.Get (Maybe AckTimeDelta)
+getAckDelay = Just <$> parse <$> Get.getInt16be
+  where
+    parse = undefined
+
+-- | getAckBlockLength
+getAckBlockLength :: AckBlockLengthSize -> Get.Get Integer
+getAckBlockLength abl = fromIntegral <$> case abl of
+                        AckBlock1Byte -> I.getInt8
+                        AckBlock2Byte -> I.getInt16
+                        AckBlock4Byte -> I.getInt32
+                        AckBlock6Byte -> I.getInt48
+
+-- | getAckBlocks
+getAckBlocks :: Int -> AckBlockLengthSize -> Get.Get AckBlock
+getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl first)
+  where
+    getAckBlock abl first = do
+      pn0   <-  getAckBlockLength abl
+      rest  <- getRestBlock abl (pn0 - first)
+      return $ AckBlock ( [pn0, pn0-1.. pn0 - first ] ++  rest )
+      where
+        getGap = fromIntegral <$> I.getInt8
+        getRestBlock :: AckBlockLengthSize -> PacketNumber ->  Get.Get [PacketNumber]
+        getRestBlock abl pn
+          | (pn <= 0) = return []
+          | otherwise = do
+          gap <- getGap
+          len <- getAckBlockLength abl
+          rest <- getRestBlock abl (pn - gap - len)
+          let pn' = pn - len
+              cont =  [pn',pn'-1..(pn'- len)]
+          return (cont ++ rest)
+
+-- | getAckTimeStamps
+getAckTimeStamps :: PacketNumber  -- Largest Acked
+                -> Integer            -- Delta Largest Acked
+                ->  Get.Get AckTimeStamp
+getAckTimeStamps lack n = do
+    delta0  <- getDelta
+    stamp0  <- getQUICTime
+    rest    <- getAckTimeStamp lack (n - 1)
+    let first = (lack - delta0, stamp0)
+    return $ AckTimeStamp (first : rest)
+  where
+    getDelta = fromIntegral <$> I.getInt8
+    getQUICTimeDelta = getAckDelay
+
+    getAckTimeStamp :: PacketNumber -> Integer -> Get.Get [(PacketNumber, QUICTime)]
+    getAckTimeStamp _ 0 = return []
+    getAckTimeStamp lack n = do
+      gap <- getDelta
+      diff <- getQUICTimeDelta
+      rest <- getAckTimeStamp lack (n - 1)
+      return ((lack - gap, diff) : rest)
