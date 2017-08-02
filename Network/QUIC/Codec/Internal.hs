@@ -180,6 +180,10 @@ toPacketNumberSize w
   | otherwise =  PacketNumber4Byte
 
 
+toAckBlockLengthSize :: Int -> AckBlockLengthSize
+toAckBlockLengthSize i = undefined
+toLAckSize :: PacketNumber -> LAckSize
+toLAckSize i = undefined
 
 
 errorCodeToInt :: ErrorCode -> Int
