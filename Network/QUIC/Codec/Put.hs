@@ -1,7 +1,7 @@
 module Network.QUIC.Codec.Put
   where
 
-import qualified Data.Binary.Put             as Put
+import           Data.Binary.Put
 import           Data.Int
 import           Data.Maybe
 
@@ -13,64 +13,123 @@ import           Network.QUIC.Codec.Internal
 import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 
-putPacketNumber :: PacketNumber -> Put.Put
-putPacketNumber =  Put.putInt64be . fromIntegral
+putPacketNumber :: PacketNumber -> Put
+putPacketNumber =  putInt64be . fromIntegral
 
-putConnectionId :: ConnectionId -> Put.Put
-putConnectionId = Put.putWord64be . fromIntegral
+putConnectionId :: ConnectionId -> Put
+putConnectionId = putWord64be . fromIntegral
 
-putStreamId :: StreamId -> Put.Put
+putStreamId :: StreamId -> Put
 putStreamId sid
-  | (sid < 2^8 ) = Put.putWord8 $ fromIntegral sid
-  | (sid < 2^16) = Put.putInt16be $ fromIntegral sid
+  | (sid < 2^8 ) = putWord8 $ fromIntegral sid
+  | (sid < 2^16) = putInt16be $ fromIntegral sid
   | (sid < 2^24) = error "not yet implemented in Network.QUIC.Codec"
-  | otherwise = Put.putInt32be $ fromIntegral sid
+  | otherwise = putInt32be $ fromIntegral sid
 
-putOffset :: Offset -> Put.Put
+putOffset :: Offset -> Put
 putOffset offset
-  | (offset < 2^16) = Put.putInt16be $ fromIntegral offset
-  | (offset < 2^32) = Put.putInt32be $ fromIntegral offset
-  | otherwise       = Put.putInt64be $ fromIntegral offset
+  | (offset < 2^16) = putInt16be $ fromIntegral offset
+  | (offset < 2^32) = putInt32be $ fromIntegral offset
+  | otherwise       = putInt64be $ fromIntegral offset
 
 -- | putErrorCode
-putErrorCode :: ErrorCode -> Put.Put
-putErrorCode e = Put.putInt32be . fromIntegral $ errorCodeToInt e
+putErrorCode :: ErrorCode -> Put
+putErrorCode e = putInt32be . fromIntegral $ errorCodeToInt e
 
-putQUICVersion :: QUICVersion ->  Put.Put
-putQUICVersion v = Put.putInt32be $ fromIntegral v
+putQUICVersion :: QUICVersion ->  Put
+putQUICVersion v = putInt32be $ fromIntegral v
 
-putLongHeaderType :: LongHeaderType -> Put.Put
-putLongHeaderType t = Put.putWord8  (fromLongHeaderType t)
 
-putShortHeader c pn = Put.putWord8 0x00 >> putConnectionIdMaybe >> putPacketNumber pn
+--
+-- Header
+--
+
+putLongHeaderType :: LongHeaderType -> Put
+putLongHeaderType t = putWord8  (fromLongHeaderType t)
+
+putHeader :: EncodeContext -> Header -> Put
+putHeader ctx hdr = case hdr of
+                      (LongHeader typ c pn v) -> putLongHeader c pn v
+                      (ShortHeader c pn)      -> putShortHeader c pn
+
+putLongHeader c pn v = putWord8 0x80 >> putConnectionId c >> putPacketNumber pn >> putQUICVersion v
+
+putShortHeader c pn = putWord8 0x00 >> putConnectionIdMaybe >> putPacketNumber pn
   where
     putConnectionIdMaybe = if isJust c then putConnectionId $ fromJust c else return ()
 
-putLongHeader c pn v = Put.putWord8 0x80 >> putConnectionId c >> putPacketNumber pn >> putQUICVersion v
 
+--
+--
 -- Long Packet Payload
--- | putVersionNegotiation
+--
+--
 
+putLongPackerPaload :: EncodeContext -> LongPacketPayload -> Put
+putLongPackerPaload ctx p = case p of
+   (VersionNegotiation v vs)        ->  putVersionNegotiation  v vs
+   (ClientInitial bs)               ->  putByteString bs
+   (ServerCleartext bs)             ->  putByteString bs
+   (ServerStatelessRetry bs)        ->  putByteString bs
+   (ClientCleartext bs)             ->  putByteString bs
+   (ZeroRTTProtected bs)            ->  putByteString bs
+   (OneRTTProtectedKeyPhaseZero bs) ->  putByteString bs
+   (OneRTTProtectedKeyPhaseOne bs)  ->  putByteString bs
+-- | putVersionNegotiation
 putVersionNegotiation v vs =  putQUICVersion v >> mapM_ putQUICVersion vs
 
-putConnectionCloseFrame :: ErrorCode -> ByteString -> Put.Put
-putConnectionCloseFrame e bs = putErrorCode e >> Put.putInt16be ( fromIntegral $ BS.length bs) >> Put.putByteString bs
+putConnectionCloseFrame :: ErrorCode -> ByteString -> Put
+putConnectionCloseFrame e bs = putErrorCode e >> putInt16be ( fromIntegral $ BS.length bs) >> putByteString bs
 
-putStreamFrame s o bs = putStreamId s >> putOffset o >> putStreamData bs
-  where
-    putStreamData bs = putStreamDataLength (BS.length bs) >> Put.putByteString bs
-    putStreamDataLength 0 = return ()
-    putStreamDataLength i = Put.putInt8 $ fromIntegral i
 
-putAckFrame ctx lack delay blocks stamps=  undefined
+--
+-- Short Packet Payload  a.k.a Protected Payload
+--
+
+putFrame :: EncodeContext -> Frame -> Put
+putFrame ctx frame = case frame of
+  Padding                        -> putPaddingFrame
+  (Goaway latest unknown)        -> putGoawayFrame latest unknown
+  (MaxData i)                    -> putMaxDataFrame i
+  (MaxStreamData s i)            -> putMaxStreamDataFrame ctx s i
+  (MaxStreamId s)                -> putMaxStreamIdFrame s
+  (ConnectionClose err s)        -> putConnectionCloseFrame err s
+
+  (Stream s o bs)                -> putStreamFrame s o bs
+  (Ack lack delay blocks stamps) -> putAckFrame ctx lack delay blocks stamps
+
+
+putPaddingFrame = putByteString $ BS.singleton 0x60
 
 putMaxDataFrame i = undefined
 
 putGoawayFrame  latest unkown= undefined
 
-putMaxStreamDataFrame sid size = undefined
+putMaxStreamDataFrame ctx s i= undefined
 
-putPaddingFrame = Put.putByteString $ BS.singleton 0x60
-
-putMaxStreamIdFrame :: StreamId -> Put.Put
+putMaxStreamIdFrame :: StreamId -> Put
 putMaxStreamIdFrame sid = putStreamId sid
+
+putStreamFrame :: StreamId -> Offset -> ByteString -> Put
+putStreamFrame s o bs = putStreamId s >> putOffset o >> putStreamData bs
+  where
+    putStreamData bs = putStreamDataLength (BS.length bs) >> putByteString bs
+    putStreamDataLength 0 = return ()
+    putStreamDataLength i = putInt8 $ fromIntegral i
+
+putAckFrame :: EncodeContext
+            -> PacketNumber
+            -> AckTimeDelta
+            -> AckBlock
+            -> AckTimeStamp
+            -> Put
+putAckFrame ctx lack delay blocks stamps =  do
+    putLargestAcked lack
+    putAckTimeDelta delay
+    putAckBlocks blocks
+    putAckTimeStamp stamps
+  where
+    putLargestAcked = undefined
+    putAckTimeDelta = undefined
+    putAckBlocks    = undefined
+    putAckTimeStamp = undefined

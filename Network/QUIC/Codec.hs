@@ -6,7 +6,7 @@ module Network.QUIC.Codec
   where
 
 import qualified Data.Binary.Get             as Get
-import qualified Data.Binary.Put             as Put
+import           Data.Binary.Put             (runPut)
 import           Network.QUIC.Codec.Get
 import           Network.QUIC.Codec.Internal
 import           Network.QUIC.Codec.Put
@@ -308,50 +308,19 @@ encode :: EncodeContext -> Packet -> ByteString
 encode ctx (LongPacket hdr payload) = encodeHeader ctx hdr `BS.append` encodeLongPacketPayload ctx payload
 encode ctx (ShortPacket hdr payload)  = encodeHeader ctx hdr `BS.append` encodeFrames ctx payload
 
+-- | encodeLongPacketPayload
 encodeLongPacketPayload :: EncodeContext -> LongPacketPayload -> ByteString
-encodeLongPacketPayload ctx p = LBS.toStrict . Put.runPut $ case p of
-       (VersionNegotiation v vs)        ->  putVersionNegotiation  v vs
-       (ClientInitial bs)               ->  Put.putByteString bs
-       (ServerCleartext bs)             ->  Put.putByteString bs
-       (ServerStatelessRetry bs)        ->  Put.putByteString bs
-       (ClientCleartext bs)             ->  Put.putByteString bs
-       (ZeroRTTProtected bs)            ->  Put.putByteString bs
-       (OneRTTProtectedKeyPhaseZero bs) ->  Put.putByteString bs
-       (OneRTTProtectedKeyPhaseOne bs)  ->  Put.putByteString bs
+encodeLongPacketPayload ctx p = LBS.toStrict . runPut $ putLongPackerPaload ctx p
 
-
+-- | encodeHeader
 encodeHeader :: EncodeContext -> Header -> ByteString
-encodeHeader ctx (LongHeader typ c pn v) = LBS.toStrict . Put.runPut $ putLongHeader c pn v
-encodeHeader ctx (ShortHeader c pn)   = LBS.toStrict . Put.runPut $ putShortHeader c pn
+encodeHeader ctx hdr = LBS.toStrict . runPut $ putHeader ctx hdr
 
+-- | encodeFrames
 encodeFrames :: EncodeContext -> [Frame] -> ByteString
 encodeFrames _ []       = BS.empty
 encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
 
+-- | encodeFrame
 encodeFrame :: EncodeContext -> Frame -> ByteString
-encodeFrame ctx frame = LBS.toStrict $ case frame of
-      (Stream s o bs)                   -> encodeStreamFrame s o bs
-        where
-          encodeStreamFrame s o bs = Put.runPut (putStreamFrame s o bs)
-      (Ack lack delay blocks stamps) -> undefined
-        where
-          encodeAckFrame ctx lack delay blocks stamps = Put.runPut $ putAckFrame ctx lack delay blocks stamps
-      Padding -> encodePaddingFrame
-        where
-          encodePaddingFrame  = Put.runPut  putPaddingFrame
-      (Goaway latest unknown) -> encodeGoawayFrame latest unknown
-        where
-          encodeGoawayFrame latest unknown = Put.runPut $ putGoawayFrame latest unknown
-      (MaxData i) -> encodeMaxDataFrame i
-        where
-          encodeMaxDataFrame i = Put.runPut $ putMaxDataFrame i
-      (MaxStreamData s i) -> undefined
-        where
-          encodeMaxStreamDataFrame sid size = Put.runPut $ putMaxStreamDataFrame sid size
-            where
-      (MaxStreamId s) -> encodeMaxStreamIdFrame s
-        where
-          encodeMaxStreamIdFrame sid = Put.runPut $ putMaxStreamIdFrame sid
-      (ConnectionClose err s) -> undefined
-        where
-          encodeConnectionCloseFrame e msg = Put.runPut $ putConnectionCloseFrame e msg
+encodeFrame ctx frame = LBS.toStrict $ runPut (putFrame ctx frame)
