@@ -86,26 +86,50 @@ putConnectionCloseFrame e bs = putErrorCode e >> putInt16be ( fromIntegral $ BS.
 -- Short Packet Payload  a.k.a Protected Payload
 --
 
+putFrameType :: FrameType -> Put
+putFrameType ft = undefined
+
 putFrame :: EncodeContext -> Frame -> Put
 putFrame ctx frame = case frame of
-  Padding                        -> putPaddingFrame
-  (Goaway latest unknown)        -> putGoawayFrame latest unknown
-  (MaxData i)                    -> putMaxDataFrame i
-  (MaxStreamData s i)            -> putMaxStreamDataFrame ctx s i
-  (MaxStreamId s)                -> putMaxStreamIdFrame s
-  (ConnectionClose err s)        -> putConnectionCloseFrame err s
+  Padding                        -> putFrameType PaddingType  >> putPaddingFrame
+  (Goaway latest unknown)        -> putFrameType GoawayType   >> putGoawayFrame latest unknown
+  (MaxData i)                    -> putFrameType MaxDataType  >> putMaxDataFrame i
+  (MaxStreamData s i)            -> putFrameType MaxStreamDataType    >>  putMaxStreamDataFrame s i
+  (MaxStreamId s)                -> putFrameType MaxStreamIdType      >> putMaxStreamIdFrame s
+  (ConnectionClose err s)        -> putFrameType ConnectionCloseType  >> putConnectionCloseFrame err s
 
-  (Stream s o bs)                -> putStreamFrame s o bs
-  (Ack lack delay blocks stamps) -> putAckFrame ctx lack delay blocks stamps
+  (Stream s o bs)                -> putFrameType styp >> putStreamFrame s o bs
+    where
+      styp = StreamType (encodeContextStreamFin ctx)
+                        (encodeContextStreamSize ctx)
+                        (encodeContextOffsetSize ctx)
+                        (encodeContextStreamHasData ctx)
+
+  (Ack lack delay blocks stamps) -> putFrameType acktyp >> putAckFrame ctx lack delay blocks stamps
+    where
+      toAckBlockLength = undefined
+      toLAckSize = undefined
+      acktyp = AckType exists lacksize ablsize
+      lacksize = toLAckSize lack
+      (exists, ablsize) = let AckBlock blks = blocks
+                              l = length blks
+                              ablsize = toAckBlockLength l
+                          in if l > 1 then (True, ablsize) else (False, ablsize)
 
 
-putPaddingFrame = putByteString $ BS.singleton 0x60
+putPaddingFrame :: Put
+putPaddingFrame = return ()
 
-putMaxDataFrame i = undefined
+putMaxDataFrame :: Int64 -> Put
+putMaxDataFrame i = putInt64be i
 
-putGoawayFrame  latest unkown= undefined
+putGoawayFrame :: StreamId -> StreamId -> Put
+putGoawayFrame  latest unknown = putStreamId latest >> putStreamId unknown
 
-putMaxStreamDataFrame ctx s i= undefined
+putMaxStreamDataFrame :: StreamId -> Int64 -> Put
+putMaxStreamDataFrame s i = do
+    putStreamId s
+    putInt64be i
 
 putMaxStreamIdFrame :: StreamId -> Put
 putMaxStreamIdFrame sid = putStreamId sid
