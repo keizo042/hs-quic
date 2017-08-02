@@ -67,7 +67,7 @@ type ShortPacketPayload = [Frame]
 data Frame = Stream !StreamId !Offset !ByteString
            | Ack !PacketNumber !AckTimeDelta !AckBlock !AckTimeStamp
            | MaxData !Int64
-           | MaxStreamData !StreamId !Int
+           | MaxStreamData !StreamId !Int64
            | MaxStreamId !StreamId
            | Blocked
            | StreamBlocked !StreamId
@@ -82,15 +82,20 @@ data Frame = Stream !StreamId !Offset !ByteString
 
 
 data PacketNumberSize = PacketNumber1Byte | PacketNumber2Byte | PacketNumber4Byte
+                      deriving Show
 
 data DecodeContext = DecodeContext { decodeContextStreamSize :: StreamSize
                                    , decodeContextOffsetSize :: OffsetSize
                                    , decodeContextPacketNumberSize :: PacketNumberSize
                                    , decodeContextLongPacketContext :: Maybe LongPacketContext}
+                                   deriving Show
 
-data EncodeContext = EncodeContext { encodeContextPacketNumberSize :: PacketNumberSize
-                                   , encodeContextStreamSize :: StreamSize
-                                   , encodeContextOffsetSize :: OffsetSize  }
+data EncodeContext = EncodeContext { encodeContextPacketNumberSize  :: PacketNumberSize
+                                   , encodeContextStreamSize        :: StreamSize
+                                   , encodeContextStreamFin         :: Bool
+                                   , encodeContextStreamHasData     :: Bool
+                                   , encodeContextOffsetSize        :: OffsetSize  }
+                                   deriving Show
 
 -- | Internal use
 data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte
