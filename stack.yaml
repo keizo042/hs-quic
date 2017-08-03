@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-8.18
+resolver: lts-8.20
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -37,9 +37,22 @@ resolver: lts-8.18
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+- location: 
+    git: https://github.com/kazu-yamamoto/hs-tls.git
+    commit: 96544ea12eaeda9fd55fc99c0e64e56b7e63fa4e
+  extra-dep: true
+  subdirs: 
+    - core
+
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+- cryptonite-0.24
+- x509-1.7.2
+- x509-store-1.6.5
+- x509-validation-1.6.8
+
+
 
 # Override default flag values for local packages and extra-deps
 flags: {}
