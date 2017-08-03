@@ -203,9 +203,11 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
           | otherwise = do
           gap <- getGap
           len <- getAckBlockLength abl
-          rest <- getRestBlock abl (pn - gap - len)
-          let pn' = pn - len
-              cont =  [pn',pn'-1..(pn'- len)]
+          let pn' = (fromIntegral pn) - gap
+              pn''  = pn' - len
+              cont :: [PacketNumber]
+              cont =  [pn', pn'-1..pn'']
+          rest <- getRestBlock abl pn''
           return (cont ++ rest)
 
 -- | getAckTimeStamps

@@ -2,14 +2,10 @@
 module Network.QUIC.Types
   where
 
-import qualified Data.Binary           as B
-import qualified Data.Binary.Get       as Get
-import qualified Data.Binary.Put       as Put
-import           Data.Bits
 import           Data.ByteString       (ByteString)
 import           Data.Default.Class
 import           Data.Int
-import qualified Data.Time.Clock       as Clock
+import           Data.Time.Clock
 
 import           Network.QUIC.UFloat16
 
@@ -152,9 +148,9 @@ type Offset = Integer
 -- QUICTime is moved to Network.QUIC.Time module
 
 
-type PacketNumber = Integer
+type PacketNumber = Int64
 
-type ConnectionId = Integer
+type ConnectionId = Int64
 
 type QUICVersion = Int32
 
@@ -214,10 +210,10 @@ toInt = undefined
 diffQUICTime :: QUICTime -> QUICTime -> AckTimeDelta
 diffQUICTime lv rv = undefined
 
-toUTCTime :: QUICTime -> Clock.UTCTime
+toUTCTime :: QUICTime -> UTCTime
 toUTCTime = undefined
 
-fromUTCTime :: Clock.UTCTime -> QUICTime
+fromUTCTime :: UTCTime -> QUICTime
 fromUTCTime = undefined
 
 
