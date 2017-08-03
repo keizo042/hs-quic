@@ -1,9 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Network.QUIC.Time
   where
-import           Data.ByteString (ByteString)
+import           Data.ByteString        (ByteString)
 import           Data.Int
-import qualified Data.Time.Clock as Clock
+import qualified Data.Time.Clock        as Clock
+
+import           Network.QUIC.Types.Ack
 
 -- | QUICTime
 -- TODO: See [draft-ietf-quic-transport-04] Section 8.2.2.1 "Time Format"
@@ -43,7 +45,7 @@ absQUICTime = undefined
 signumQUICTime = undefined
 toInt = undefined
 
-diffQUICTime :: QUICTime -> QUICTime -> QUICTime
+diffQUICTime :: QUICTime -> QUICTime -> AckTimeDelta
 diffQUICTime lv rv = undefined
 
 toUTCTime :: QUICTime -> Clock.UTCTime

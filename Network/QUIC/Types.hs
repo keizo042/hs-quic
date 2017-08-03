@@ -1,16 +1,17 @@
 module Network.QUIC.Types
   where
 
-import qualified Data.Binary           as B
-import qualified Data.Binary.Get       as Get
-import qualified Data.Binary.Put       as Put
+import qualified Data.Binary            as B
+import qualified Data.Binary.Get        as Get
+import qualified Data.Binary.Put        as Put
 import           Data.Bits
-import           Data.ByteString       (ByteString)
+import           Data.ByteString        (ByteString)
 import           Data.Default.Class
 import           Data.Int
-import qualified Data.Time.Clock       as Clock
+import qualified Data.Time.Clock        as Clock
 
 import           Network.QUIC.Time
+import           Network.QUIC.Types.Ack
 import           Network.QUIC.UFloat16
 
 -- | QUICResult is result type in the QUIC protocol context.
@@ -75,7 +76,7 @@ data Frame = Stream !StreamId !Offset !ByteString
            | RstStream !StreamId !ErrorCode !Offset
            | Padding
            | Ping
-           | NewConnectionId !Int !ConnectionId -- Sequence ConnectionId
+           | NewConnectionId !Int16 !ConnectionId -- Sequence ConnectionId
            | ConnectionClose !ErrorCode !ByteString -- ErrorCode ErrorMessage
            | Goaway !StreamId !StreamId
            deriving Show
@@ -138,19 +139,6 @@ type Offset = Integer
 
 -- QUICTime is moved to Network.QUIC.Time module
 
--- | AckBlock is Blocks that is recived  in Ack Frame.
-data AckBlock = AckBlock [PacketNumber]
-              deriving Show
-
--- | Gap is that gap between previous lost packet and latest one in Ack
--- Frame.
-type Gap = Int
-
--- | AckTimeStamp is TimeStamp represent in Ack Frame.
-data AckTimeStamp = AckTimeStamp [(PacketNumber, QUICTime)]
-                  deriving Show
-
-type AckTimeDelta = UFloat16
 
 type PacketNumber = Integer
 

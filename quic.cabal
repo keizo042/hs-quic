@@ -18,6 +18,7 @@ library
                        Network.QUIC.Types
   other-modules:       Network.QUIC.Internal
                        Network.QUIC.TLS
+                       Network.QUIC.Types.Ack
                        Network.QUIC.Codec
                        Network.QUIC.Codec.Internal
                        Network.QUIC.Codec.Put

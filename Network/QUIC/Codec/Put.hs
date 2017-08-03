@@ -13,6 +13,7 @@ import qualified Data.ByteString.Lazy        as LBS
 
 import           Network.QUIC.Codec.Internal
 import qualified Network.QUIC.Internal       as I
+import           Network.QUIC.Time
 import           Network.QUIC.Types
 
 runPutStrict :: Put -> ByteString
@@ -105,25 +106,26 @@ putFrameType ft = putWord8 $ fromFrameType ft
 putFrame :: EncodeContext -> Frame -> Put
 putFrame ctx@(EncodeContext ps ss oo fin d) frame = case frame of
   Padding                 -> putFrameType PaddingType  >> putPaddingFrame
-  (RstStream s err offset)                   -> putFrameType RstStreamType >> putRstStreamFrame ss s err oo offset
-  (ConnectionClose err s) -> putFrameType ConnectionCloseType  >> putConnectionCloseFrame err s
-  (Goaway latest unknown) -> putFrameType GoawayType   >> putGoawayFrame ss latest unknown
+  (RstStream s err offset) -> putFrameType RstStreamType >> putRstStreamFrame s err offset
+  (Goaway latest unknown) -> putFrameType GoawayType   >> putGoawayFrame latest unknown
   (MaxData i)             -> putFrameType MaxDataType  >> putMaxDataFrame i
   (MaxStreamData s i)     -> putFrameType MaxStreamDataType >> putMaxStreamDataFrame ss s i
-  (MaxStreamId s)         -> putFrameType MaxStreamIdType >> putMaxStreamIdFrame ss s
+  (MaxStreamId s)         -> putFrameType MaxStreamIdType >> putMaxStreamIdFrame s
   Ping                    -> putFrameType PingType >> putPingFrame
   Blocked                 -> putFrameType BlockedType >>  putBlockedFrame
   (StreamBlocked s)       -> putFrameType StreamBlockedType >> putStreamBlockedFrame s
   StreamIdNeeded          -> putFrameType StreamIdNeededType >> putStreamIdNeededFrame
   (NewConnectionId i cid) -> putFrameType NewConnectionType >> putNewConnectionId i cid
+  (ConnectionClose err s) -> putFrameType ConnectionCloseType  >> putConnectionCloseFrame err s
 
   (Stream s o bs)                -> putFrameType styp >> putStreamFrame ss s oo o bs
     where
       styp = StreamType fin ss oo d
 
-  (Ack lack delay blocks stamps) -> putFrameType acktyp >> putAckFrame ctx lack delay blocks stamps
+  (Ack lack delay blocks stamps) -> putFrameType acktyp >> putAckFrame ctx lsize lack delay blocks stamps
     where
-      acktyp = AckType exists (toLAckSize lack) ablsize
+      acktyp = AckType exists lsize ablsize
+      lsize = toLAckSize lack
       (exists, ablsize) = let AckBlock blks = blocks
                               l = length blks
                               ablsize = toAckBlockLengthSize l
@@ -133,22 +135,20 @@ putFrame ctx@(EncodeContext ps ss oo fin d) frame = case frame of
 putPaddingFrame :: Put
 putPaddingFrame = return ()
 
-putRstStreamFrame :: StreamSize -> StreamId -> ErrorCode -> OffsetSize -> Offset -> Put
-putRstStreamFrame ssize s e osize offset = putStreamId ssize s >> putErrorCode e >> putOffset osize offset
+putRstStreamFrame ::  StreamId -> ErrorCode -> Offset -> Put
+putRstStreamFrame s e offset = putStreamId Stream4Byte s >> putErrorCode e >> putOffset Offset4Byte offset
 
 putMaxDataFrame :: Int64 -> Put
 putMaxDataFrame i = putInt64be i
 
-putGoawayFrame :: StreamSize -> StreamId -> StreamId -> Put
-putGoawayFrame  size latest unknown = putStreamId size latest >> putStreamId size unknown
+putGoawayFrame ::  StreamId -> StreamId -> Put
+putGoawayFrame  latest unknown = putStreamId Stream4Byte latest >> putStreamId Stream4Byte unknown
 
-putMaxStreamDataFrame :: StreamSize -> StreamId -> Int64 -> Put
-putMaxStreamDataFrame size s i = do
-    putStreamId size s
-    putInt64be i
+putMaxStreamDataFrame ::  StreamId -> Int64 -> Put
+putMaxStreamDataFrame s i = putStreamId Stream4Byte s >> putInt64be i
 
-putMaxStreamIdFrame :: StreamSize -> StreamId -> Put
-putMaxStreamIdFrame size sid = putStreamId size sid
+putMaxStreamIdFrame :: StreamId -> Put
+putMaxStreamIdFrame sid = putStreamId Stream4Byte sid
 
 putPingFrame :: Put
 putPingFrame = return ()
@@ -158,28 +158,45 @@ putBlockedFrame = return ()
 
 putStreamIdNeededFrame = return ()
 
-putNewConnectionId :: Int -> ConnectionId -> Put
-putNewConnectionId i cid= undefined
+putNewConnectionId :: Int16 -> ConnectionId -> Put
+putNewConnectionId i cid = putInt16be i >> putConnectionId cid
 
-putStreamBlockedFrame s = undefined
+putStreamBlockedFrame :: StreamId -> Put
+putStreamBlockedFrame s = putStreamId Stream4Byte s
 
 
 putAckFrame :: EncodeContext
+            -> LAckSize
             -> PacketNumber
             -> AckTimeDelta
             -> AckBlock
             -> AckTimeStamp
             -> Put
-putAckFrame ctx lack delay blocks stamps =  do
+putAckFrame ctx lsize lack delay blocks stamps =  do
     putLargestAcked lack
     putAckTimeDelta delay
     putAckBlocks blocks
     putAckTimeStamp stamps
   where
-    putLargestAcked lacked = undefined
-    putAckTimeDelta delta = undefined
-    putAckBlocks    blocks = undefined
-    putAckTimeStamp ts = undefined
+    putLargestAcked lsize lacked = undefined
+    putAckTimeDelta delta = putInt16be delta
+    putAckBlocks  (AckBlock blocks) = undefined
+    putFirstTampStamp :: PacketNumber -> PacketNumber -> QUICTime -> Put
+    putFirstTampStamp lacked pn time = putInt8 (lacked - pn) >> putQUICTime time
+    putAckTimeStamp :: PacketNumber -> AckTimeStamp -> Put
+    putAckTimeStamp lacked (AckTimeStamp [(pn,time)])  = putFirstTampStamp lacked pn time
+    putAckTimeStamp lacked (AckTimeStamp ((pn,time):xs))  = do
+      putFirstTampStamp lacked pn time
+      putTimestamps lacked time xs
+      where
+        putTimestamps :: PacketNumber -> QUICTime -> [(PacketNumber,QUICTime)] -> Put
+        putTimestamps _ _ []             = return ()
+        putTimestamps lacked time ((pn,t):xs) = do
+          let delta  = (diffQUICTime time t)
+          putInt8 (lacked - pn)
+          putAckTimeDelta delta
+          putTimestamps lacked (time - delta) xs
+
 
 putStreamFrame :: StreamSize -> StreamId -> OffsetSize -> Offset -> ByteString -> Put
 putStreamFrame ssize s osize o bs = putStreamId ssize s >> putOffset osize o >> putStreamData bs
