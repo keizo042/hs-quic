@@ -46,112 +46,40 @@ decode bs = decodeHeader bs >>= \ (hdr, bs') -> decodePayload hdr bs'
 
 -- | decodeHeader
 decodeHeader :: ByteString -> QUICResult (Header, ByteString)
-decodeHeader bs =  case (toHeaderType $ BS.head bs) of
-   LongHeaderType  -> decodeLongHeader bs
-   ShortHeaderType -> decodeShortHeader bs
+decodeHeader bs =  case (toHeaderType b) of
+   LongHeaderType  -> case (toLongHeaderType b) of
+                        (Just h) -> decodeLongHeader h bs
+                        Nothing  -> Left QUICInvalidPacketHeader
+   ShortHeaderType -> decodeShortHeader b bs
   where
-    decodeLongHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeLongHeader bs = case (Get.runGetOrFail getLongHeader $ LBS.fromStrict bs) of
-       Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-       _                    -> Left QUICInvalidPacketHeader
-      where
-        getLongHeader :: Get.Get Header
-        getLongHeader = Get.getWord8 >>= (\w -> LongHeader <$> getHeaderType w
-                                   <*> getConnectionId
-                                   <*> getPacketNumber PacketNumber4Byte
-                                   <*> getQUICVersion)
-            where
-              getHeaderType :: Word8 -> Get.Get LongHeaderType
-              getHeaderType w = case (toLongHeaderType w) of
-                (Just t) -> return t
-                Nothing  -> fail "invalid long header type"
+    (b, bs') = (BS.head bs, BS.tail bs)
 
-    decodeShortHeader :: ByteString -> QUICResult (Header, ByteString)
-    decodeShortHeader bs = case (Get.runGetOrFail getShortHeader $ LBS.fromStrict bs) of
-        Right (rest, _, hdr) -> Right (hdr, LBS.toStrict rest)
-        _                    -> Left QUICInvalidPacketHeader
-      where
-        getShortHeader :: Get.Get Header
-        getShortHeader = Get.getWord8 >>= getShortHeader'
-          where
-            getConnIdMaybe w = if hasConn w then Just <$> getConnectionId else return Nothing
-            hasConn w = w .|. 0x40 == 0x40
-            getShortHeader' w = ShortHeader <$> getConnIdMaybe w <*> getPacketNumber (toPacketNumberSize w)
+    runGetOrFail' :: Get Header -> ByteString -> QUICResult (Header, ByteString)
+    runGetOrFail' f bs =  runGetOrFailWithError bs f QUICInvalidPacketHeader
+
+    decodeLongHeader :: LongHeaderType -> ByteString -> QUICResult (Header, ByteString)
+    decodeLongHeader h bs = runGetOrFail' (getLongHeader h) bs
+    decodeShortHeader :: Word8 -> ByteString -> QUICResult (Header, ByteString)
+    decodeShortHeader b bs = runGetOrFail' (getShortHeader b) bs
+
 
 -- | decodeLongPacketPayload that it decode Payload with LongHeader.
 -- | it was chcked  payload type in Long Header prefix octet and parse rest of octet.
 decodeLongPacketPayload :: DecodeContext -> ByteString -> QUICResult (LongPacketPayload, ByteString)
 decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
-       (Just c) -> choiceDecoder (longPacketContextLongHeaderType c)
+       (Just c) -> run (longPacketContextLongHeaderType c) bs
        Nothing  -> Left QUICInvalidPacketHeader
      where
-       choiceDecoder typ = case typ of
-         VersionNegotiationType -> decodeVersionNegotiation bs
-          where
-            decodeVersionNegotiation bs = case (Get.runGetOrFail getVersionNegotiation $ LBS.fromStrict bs) of
-               (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-               (Left _) -> Left QUICInvalidVersionNegotiationPacket
-            getVersionNegotiation :: Get.Get LongPacketPayload
-            getVersionNegotiation = VersionNegotiation <$> getQUICVersion <*> getQUICVersions
-
-
-         ClientInitialType  -> decodeClientInitial bs
-          where
-           decodeClientInitial  bs = case (Get.runGetOrFail getClientInitial $ LBS.fromStrict bs) of
-                (Right (bs', _, d)) -> Right (d, LBS.toStrict bs')
-                _                   -> Left QUICInternalError -- TODO: maybe there are proper error.
-           getClientInitial :: Get.Get LongPacketPayload
-           getClientInitial         = undefined
-
-         ServerStatelessRetryType -> decodeServerStatelessRetry bs
-          where
-            decodeServerStatelessRetry bs= case (Get.runGetOrFail getServerStatelessRetry $ LBS.fromStrict bs) of
-               (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-               _                   -> Left QUICInternalError -- TODO: maybe
-            getServerStatelessRetry = undefined
-
-         ServerCleartextType  -> decodeServerClearText bs
-          where
-            decodeServerClearText bs = case (Get.runGetOrFail getServerClearText $ LBS.fromStrict bs) of
-              (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> Left QUICInternalError
-            getServerClearText = undefined
-
-         ClientCleartextType  -> decodeClientClearText bs
-          where
-            decodeClientClearText bs =  case (Get.runGetOrFail getClientClearText $ LBS.fromStrict bs) of
-              (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> Left QUICInternalError
-
-            getClientClearText = undefined
-
-         ZeroRTTProtectedType            -> decodeZeroRTTProtected bs
-          where
-            decodeZeroRTTProtected bs = case (Get.runGetOrFail getZeroRTTProtected $ LBS.fromStrict bs) of
-              (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> Left QUICInternalError
-            getZeroRTTProtected     = undefined
-
-         OneRTTProtectedKeyPhaseZeroType -> decodeOneRTTProtectedKeyPhaseZero bs
-          where
-            decodeOneRTTProtectedKeyPhaseZero bs = case (Get.runGetOrFail getOneRTTProtectedKeyPhaseZero $ LBS.fromStrict bs) of
-              (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> Left QUICInternalError
-            getOneRTTProtectedKeyPhaseZero    = undefined
-
-         OneRTTProctectedKeyPhaseOneType -> decodeOneRTTPRotectedKeyPhaseOne bs
-          where
-            decodeOneRTTPRotectedKeyPhaseOne bs  = case (Get.runGetOrFail getOneRTTProtectedKeyPhaseOne $ LBS.fromStrict bs) of
-              (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> Left QUICInternalError
-            getOneRTTProtectedKeyPhaseOne     = undefined
-
-         PublicResetType                 -> decodePublicReset bs
-          where
-            decodePublicReset bs = case (Get.runGetOrFail getPublicReset $ LBS.fromStrict bs) of
-              (Right (bs', _, f)) -> Right (f, LBS.toStrict bs')
-              _                   -> Left QUICInvalidPublicReset
-            getPublicReset = undefined
+       run typ bs = case typ of
+         VersionNegotiationType           -> runGetOrFailWithError bs getVersionNegotiation   QUICInvalidVersionNegotiationPacket
+         ClientInitialType                -> runGetOrFailWithError bs getClientInitial        QUICInternalError
+         ServerStatelessRetryType         -> runGetOrFailWithError bs getServerStatelessRetry QUICInternalError
+         ServerCleartextType              -> runGetOrFailWithError bs getServerClearText      QUICInternalError
+         ClientCleartextType              -> runGetOrFailWithError bs getClientClearText      QUICInternalError
+         ZeroRTTProtectedType             -> runGetOrFailWithError bs getZeroRTTProtected     QUICInternalError
+         OneRTTProtectedKeyPhaseZeroType  -> runGetOrFailWithError bs getOneRTTProtectedKeyPhaseZero  QUICInternalError
+         OneRTTProctectedKeyPhaseOneType  -> runGetOrFailWithError bs getOneRTTProtectedKeyPhaseOne   QUICInternalError
+         PublicResetType                  -> runGetOrFailWithError bs getPublicReset QUICInternalError
 
 -- | decodeFrames
 decodeFrames :: DecodeContext -> ByteString -> QUICResult [Frame]
