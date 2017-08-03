@@ -92,9 +92,9 @@ data DecodeContext = DecodeContext { decodeContextStreamSize :: StreamSize
 
 data EncodeContext = EncodeContext { encodeContextPacketNumberSize  :: PacketNumberSize
                                    , encodeContextStreamSize        :: StreamSize
+                                   , encodeContextOffsetSize        :: OffsetSize
                                    , encodeContextStreamFin         :: Bool
-                                   , encodeContextStreamHasData     :: Bool
-                                   , encodeContextOffsetSize        :: OffsetSize  }
+                                   , encodeContextStreamHasData     :: Bool }
                                    deriving Show
 
 -- | Internal use

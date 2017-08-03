@@ -56,11 +56,9 @@ putLongHeaderType :: LongHeaderType -> Put
 putLongHeaderType t = putWord8  (fromLongHeaderType t)
 
 putHeader :: EncodeContext -> Header -> Put
-putHeader ctx hdr = case hdr of
-                      (LongHeader typ c pn v) -> putLongHeader c ps pn v
-                      (ShortHeader c pn)      -> putShortHeader c ps pn
-        where
-              ps = encodeContextPacketNumberSize ctx
+putHeader ctx@(EncodeContext ps  _ _ _ _) hdr = case hdr of
+  (LongHeader typ c pn v) -> putLongHeader c ps pn v
+  (ShortHeader c pn)      -> putShortHeader c ps pn
 
 putLongHeader c psize pn v = putWord8 w >> putConnectionId c >> putPacketNumber psize pn >> putQUICVersion v
   where
@@ -105,7 +103,7 @@ putFrameType :: FrameType -> Put
 putFrameType ft = putWord8 $ fromFrameType ft
 
 putFrame :: EncodeContext -> Frame -> Put
-putFrame ctx frame = case frame of
+putFrame ctx@(EncodeContext ps ss oo fin d) frame = case frame of
   Padding                 -> putFrameType PaddingType  >> putPaddingFrame
   (RstStream s err offset)                   -> putFrameType RstStreamType >> putRstStreamFrame ss s err oo offset
     where
