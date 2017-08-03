@@ -18,25 +18,27 @@ import           Network.QUIC.Types
 runPutStrict :: Put -> ByteString
 runPutStrict  = LBS.toStrict . runPut
 
-putPacketNumber :: PacketNumber -> Put
-putPacketNumber =  putInt64be . fromIntegral
+putPacketNumber :: PacketNumberSize -> PacketNumber -> Put
+putPacketNumber size pn = case size of
+  PacketNumber1Byte -> putWord8 $ fromIntegral pn
+  PacketNumber2Byte -> putInt16be $ fromIntegral pn
+  PacketNumber4Byte -> putInt32be $ fromIntegral pn
 
 putConnectionId :: ConnectionId -> Put
 putConnectionId = putWord64be . fromIntegral
 
-putStreamId :: StreamId -> Put
-putStreamId sid
-  | (sid < 2^8 ) = putWord8 $ fromIntegral sid
-  | (sid < 2^16) = putInt16be $ fromIntegral sid
-  | (sid < 2^24) = I.putInt24 $ fromIntegral sid
-  | otherwise = putInt32be $ fromIntegral sid
-    where
+putStreamId :: StreamSize -> StreamId -> Put
+putStreamId size sid = case size of
+     Stream1Byte -> putInt8 $ fromIntegral sid
+     Stream2Byte -> putInt16be $ fromIntegral sid
+     Stream3Byte -> I.putInt24 $ fromIntegral sid
+     Stream4Byte -> putInt32be $ fromIntegral sid
 
-putOffset :: Offset -> Put
-putOffset offset
-  | (offset < 2^16) = putInt16be $ fromIntegral offset
-  | (offset < 2^32) = putInt32be $ fromIntegral offset
-  | otherwise       = putInt64be $ fromIntegral offset
+putOffset :: OffsetSize -> Offset -> Put
+putOffset size offset = case size of
+  Offset2Byte ->  putInt16be $ fromIntegral offset
+  Offset4Byte ->  putInt32be $ fromIntegral offset
+  Offset8Byte ->  putInt64be $ fromIntegral offset
 
 -- | putErrorCode
 putErrorCode :: ErrorCode -> Put
@@ -55,12 +57,16 @@ putLongHeaderType t = putWord8  (fromLongHeaderType t)
 
 putHeader :: EncodeContext -> Header -> Put
 putHeader ctx hdr = case hdr of
-                      (LongHeader typ c pn v) -> putLongHeader c pn v
-                      (ShortHeader c pn)      -> putShortHeader c pn
+                      (LongHeader typ c pn v) -> putLongHeader c ps pn v
+                      (ShortHeader c pn)      -> putShortHeader c ps pn
+        where
+              ps = encodeContextPacketNumberSize ctx
 
-putLongHeader c pn v = putWord8 0x80 >> putConnectionId c >> putPacketNumber pn >> putQUICVersion v
+putLongHeader c psize pn v = putWord8 w >> putConnectionId c >> putPacketNumber psize pn >> putQUICVersion v
+  where
+    w = 0x80
 
-putShortHeader c pn = putWord8 w >> putConnectionIdMaybe >> putPacketNumber pn
+putShortHeader c psize pn = putWord8 w >> putConnectionIdMaybe >> putPacketNumber psize pn
   where
     c' =  isJust c
     keypahse = undefined
@@ -84,12 +90,12 @@ putLongPackerPaload ctx p = case p of
    (ZeroRTTProtected bs)            ->  putByteString bs
    (OneRTTProtectedKeyPhaseZero bs) ->  putByteString bs
    (OneRTTProtectedKeyPhaseOne bs)  ->  putByteString bs
+
 -- | putVersionNegotiation
 putVersionNegotiation v vs =  putQUICVersion v >> mapM_ putQUICVersion vs
 
 putConnectionCloseFrame :: ErrorCode -> ByteString -> Put
 putConnectionCloseFrame e bs = putErrorCode e >> putInt16be ( fromIntegral $ BS.length bs) >> putByteString bs
-
 
 --
 -- Short Packet Payload  a.k.a Protected Payload
@@ -101,23 +107,34 @@ putFrameType ft = putWord8 $ fromFrameType ft
 putFrame :: EncodeContext -> Frame -> Put
 putFrame ctx frame = case frame of
   Padding                 -> putFrameType PaddingType  >> putPaddingFrame
-  (RstStream s err offset)                   -> putFrameType RstStreamType >> putRstStreamFrame s err offset
+  (RstStream s err offset)                   -> putFrameType RstStreamType >> putRstStreamFrame ss s err oo offset
+    where
+      ss = encodeContextStreamSize ctx
+      oo = encodeContextOffsetSize ctx
   (ConnectionClose err s) -> putFrameType ConnectionCloseType  >> putConnectionCloseFrame err s
-  (Goaway latest unknown) -> putFrameType GoawayType   >> putGoawayFrame latest unknown
+  (Goaway latest unknown) -> putFrameType GoawayType   >> putGoawayFrame ss latest unknown
+    where
+      ss = encodeContextStreamSize ctx
   (MaxData i)             -> putFrameType MaxDataType  >> putMaxDataFrame i
-  (MaxStreamData s i)     -> putFrameType MaxStreamDataType    >>  putMaxStreamDataFrame s i
-  (MaxStreamId s)         -> putFrameType MaxStreamIdType      >> putMaxStreamIdFrame s
+  (MaxStreamData s i)     -> putFrameType MaxStreamDataType >> putMaxStreamDataFrame ss s i
+    where
+      ss = encodeContextStreamSize ctx
+  (MaxStreamId s)         -> putFrameType MaxStreamIdType >> putMaxStreamIdFrame ss s
+    where
+      ss = encodeContextStreamSize ctx
   Ping                    -> putFrameType PingType >> putPingFrame
   Blocked                 -> putFrameType BlockedType >>  putBlockedFrame
   (StreamBlocked s)       -> putFrameType StreamBlockedType >> putStreamBlockedFrame s
   StreamIdNeeded          -> putFrameType StreamIdNeededType >> putStreamIdNeededFrame
+  (NewConnectionId i cid) -> putFrameType NewConnectionType >> putNewConnectionId i cid
 
-  (Stream s o bs)                -> putFrameType styp >> putStreamFrame s o bs
+  (Stream s o bs)                -> putFrameType styp >> putStreamFrame ss s oo o bs
     where
-      styp = StreamType (encodeContextStreamFin ctx)
-                        (encodeContextStreamSize ctx)
-                        (encodeContextOffsetSize ctx)
-                        (encodeContextStreamHasData ctx)
+      f = encodeContextStreamFin ctx
+      ss = encodeContextStreamSize ctx
+      oo = encodeContextOffsetSize ctx
+      d  = encodeContextStreamHasData ctx
+      styp = StreamType f ss oo d
 
   (Ack lack delay blocks stamps) -> putFrameType acktyp >> putAckFrame ctx lack delay blocks stamps
     where
@@ -131,30 +148,33 @@ putFrame ctx frame = case frame of
 putPaddingFrame :: Put
 putPaddingFrame = return ()
 
-putRstStreamFrame :: StreamId -> ErrorCode -> Offset -> Put
-putRstStreamFrame s e offset = putStreamId s >> putErrorCode e >> putOffset offset
+putRstStreamFrame :: StreamSize -> StreamId -> ErrorCode -> OffsetSize -> Offset -> Put
+putRstStreamFrame ssize s e osize offset = putStreamId ssize s >> putErrorCode e >> putOffset osize offset
 
 putMaxDataFrame :: Int64 -> Put
 putMaxDataFrame i = putInt64be i
 
-putGoawayFrame :: StreamId -> StreamId -> Put
-putGoawayFrame  latest unknown = putStreamId latest >> putStreamId unknown
+putGoawayFrame :: StreamSize -> StreamId -> StreamId -> Put
+putGoawayFrame  size latest unknown = putStreamId size latest >> putStreamId size unknown
 
-putMaxStreamDataFrame :: StreamId -> Int64 -> Put
-putMaxStreamDataFrame s i = do
-    putStreamId s
+putMaxStreamDataFrame :: StreamSize -> StreamId -> Int64 -> Put
+putMaxStreamDataFrame size s i = do
+    putStreamId size s
     putInt64be i
 
-putMaxStreamIdFrame :: StreamId -> Put
-putMaxStreamIdFrame sid = putStreamId sid
+putMaxStreamIdFrame :: StreamSize -> StreamId -> Put
+putMaxStreamIdFrame size sid = putStreamId size sid
 
-putPingFrame = undefined
+putPingFrame :: Put
+putPingFrame = return ()
 
-putBlockedFrame = undefined
+putBlockedFrame :: Put
+putBlockedFrame = return ()
 
-putStreamIdNeededFrame = undefined
+putStreamIdNeededFrame = return ()
 
-putNewConnectionId = undefined
+putNewConnectionId :: Int -> ConnectionId -> Put
+putNewConnectionId i cid= undefined
 
 putStreamBlockedFrame s = undefined
 
@@ -171,13 +191,13 @@ putAckFrame ctx lack delay blocks stamps =  do
     putAckBlocks blocks
     putAckTimeStamp stamps
   where
-    putLargestAcked = undefined
-    putAckTimeDelta = undefined
-    putAckBlocks    = undefined
-    putAckTimeStamp = undefined
+    putLargestAcked lacked = undefined
+    putAckTimeDelta delta = undefined
+    putAckBlocks    blocks = undefined
+    putAckTimeStamp ts = undefined
 
-putStreamFrame :: StreamId -> Offset -> ByteString -> Put
-putStreamFrame s o bs = putStreamId s >> putOffset o >> putStreamData bs
+putStreamFrame :: StreamSize -> StreamId -> OffsetSize -> Offset -> ByteString -> Put
+putStreamFrame ssize s osize o bs = putStreamId ssize s >> putOffset osize o >> putStreamData bs
   where
     putStreamData bs = putStreamDataLength (BS.length bs) >> putByteString bs
     putStreamDataLength 0 = return ()

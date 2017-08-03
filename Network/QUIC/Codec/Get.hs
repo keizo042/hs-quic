@@ -21,8 +21,6 @@ runGetOrFailWithError bs f e = case (runGetOrFail f $ LBS.fromStrict bs) of
     (Right (bs', _, p)) -> Right (p, LBS.toStrict bs')
     _                   -> Left e
 
-
-
 getQUICVersion :: Get QUICVersion
 getQUICVersion = fromIntegral <$> I.getInt32
 
@@ -134,11 +132,10 @@ getNewConnectionId = NewConnectionId <$> (fromIntegral <$> getInt16be) <*> getCo
 
 getConnectionCloseFrame :: Get Frame
 getConnectionCloseFrame = ConnectionClose <$> getErrorCode  <*> getMsg
-getMsg = getInt32be >>= getmsg'
+getMsg = getInt32be >>= getmsg
   where
-    getmsg' n = if n == 0
-                  then LBS.toStrict <$> getRemainingLazyByteString
-                  else getByteString $ fromIntegral n
+    getmsg 0 = LBS.toStrict <$> getRemainingLazyByteString
+    getmsg n = getByteString $ fromIntegral n
 
 getStreamFrame ctx f ss oo d = Stream  <$> getStreamId ss <*> getOffset oo <*> getStreamData d
   where
