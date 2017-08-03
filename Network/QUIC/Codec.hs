@@ -126,100 +126,54 @@ decodeFrame ctx bss = decodeFrameType b >>= \ ft -> decodeFrame0 ctx ft bs
                           Bool ->       -- has body filed
                           ByteString -> -- payload body
                           QUICResult (Frame, ByteString)  -- a frame and rest payload or error code
-     decodeStreamFrame  ctx f ss oo d bs = case (Get.runGetOrFail (getStreamFrame ctx f ss oo d )  $ LBS.fromStrict bs) of
-         (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-         _                    -> Left QUICInvalidStreamData
+     decodeStreamFrame  ctx f ss oo d bs = runGetOrFailWithError bs
+        (getStreamFrame ctx f ss oo d )
+        QUICInvalidStreamData
 
-     decodeAckFrame ctx n lack abl bs = case (Get.runGetOrFail (getAckFrame n lack abl) $ LBS.fromStrict bs) of
-         (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-         _                    -> Left QUICInvalidAckData
+     decodeAckFrame ctx n lack abl bs =  runGetOrFailWithError bs
+        (getAckFrame n lack abl)
+        QUICInvalidAckData
 
-     decodeMaxDataFrame  = f
-        where
-          f bs = case (Get.runGetOrFail getMaxDataFrame $ LBS.fromStrict bs) of
-           (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-           _                    -> Left QUICInvalidAckData
-          getMaxDataFrame :: Get.Get Frame
-          getMaxDataFrame = MaxData <$> Get.getInt64be
+     decodeMaxDataFrame bs = runGetOrFailWithError bs
+        getMaxDataFrame
+        QUICInvalidAckData
 
-     decodeMaxStreamDataFrame = f
+     decodeMaxStreamDataFrame ctx bs= runGetOrFailWithError bs
+        (getMaxStreamDataFrame ss)
+        QUICInternalError
       where
-          f ctx bs = case (Get.runGetOrFail getMaxStreamDataFrame $ LBS.fromStrict bs) of
-           (Right (rest, _, frm)) -> Right (frm, LBS.toStrict rest)
-           _                      -> Left QUICInternalError
-
           ss = decodeContextStreamSize ctx
-          getMaxStreamDataFrame :: Get.Get Frame
-          getMaxStreamDataFrame = MaxStreamData <$> getStreamId ss <*> getMaxStreamData
-          getMaxStreamData = fromIntegral <$> Get.getInt64be
-
-     decodeMaxStreamIdFrame = f
+     decodeMaxStreamIdFrame ctx bs= runGetOrFailWithError bs
+        (getMaxStreamDataFrame ss)
+        QUICInternalError
        where
-          f ctx bs =  case (Get.runGetOrFail getMaxStreamDataFrame $ LBS.fromStrict bs) of
-           (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-           _                    -> Left QUICInternalError
-
           ss = decodeContextStreamSize ctx
-          getMaxStreamDataFrame :: Get.Get Frame
-          getMaxStreamDataFrame = MaxStreamId <$> getStreamId ss
-
      decodeBlockedFrame bs  = Right (Blocked, bs)
      decodePaddingFrame bs  = Right (Padding, bs)
      decodePingFrame    bs  = Right (Ping,    bs)
-
-     decodeStreamBlockedFrame ctx bs = f ctx bs
-      where
-        f ctx bs = case (Get.runGetOrFail getStreamBlocked $ LBS.fromStrict bs) of
-         (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-         _                    -> Left QUICInternalError
-
-        ss = decodeContextStreamSize ctx
-        getStreamBlocked :: Get.Get Frame
-        getStreamBlocked = StreamBlocked <$> getStreamId ss
-
      decodeStreamIdNeededFrame ctx bs = Right (StreamIdNeeded, bs)
-
-     decodeRstStreamFrame ctx bs = f ctx bs
+     decodeStreamBlockedFrame ctx bs = runGetOrFailWithError bs
+        (getStreamBlockedFrame ss)
+        QUICInternalError
       where
-        f ctx bs = case (Get.runGetOrFail getRstStreamFrame $ LBS.fromStrict bs) of
-         (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-         _                    -> Left QUICInvalidRstStreamData
-
+        ss = decodeContextStreamSize ctx
+     decodeRstStreamFrame ctx bs = runGetOrFailWithError bs
+        (getRstStreamFrame ss oo)
+        QUICInvalidRstStreamData
+      where
         ss = decodeContextStreamSize ctx
         oo = decodeContextOffsetSize ctx
-        getRstStreamFrame :: Get.Get Frame
-        getRstStreamFrame = RstStream <$> getStreamId ss <*> getErrorCode <*> getOffset oo
-
-     decodeNewConnectionIdFrame ctx bs = f ctx  bs
+     decodeNewConnectionIdFrame ctx bs = runGetOrFailWithError bs
+        getNewConnectionId
+        QUICInternalError
+     decodeConnectionCloseFrame ctx bs= runGetOrFailWithError bs
+        getConnectionCloseFrame
+        QUICInvalidConnectionCloseData
+     decodeGoawayFrame ctx bs =  runGetOrFailWithError bs
+        (getGoawayFrame ss)
+        QUICInvalidGoawayData
       where
-        f ctx bs= case (Get.runGetOrFail getNewConnectionId $ LBS.fromStrict bs) of
-          (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-          _                    -> Left QUICInternalError
-
-        getNewConnectionId :: Get.Get Frame
-        getNewConnectionId = NewConnectionId <$> (fromIntegral <$> Get.getInt16be) <*> getConnectionId
-
-     decodeConnectionCloseFrame = f
-      where
-          f ctx bs = case (Get.runGetOrFail getConnectionCloseFrame $ LBS.fromStrict bs) of
-           (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-           _                    -> Left QUICInvalidConnectionCloseData
-
-          getConnectionCloseFrame :: Get.Get Frame
-          getConnectionCloseFrame = ConnectionClose <$> getErrorCode  <*> getMsg
-          getMsg = Get.getInt32be >>= getmsg'
-            where
-              getmsg' n = if n == 0
-                            then LBS.toStrict <$> Get.getRemainingLazyByteString
-                            else Get.getByteString $ fromIntegral n
-
-     decodeGoawayFrame ctx bs = case (Get.runGetOrFail getGoawayFrame $ LBS.fromStrict bs) of
-                                   (Right (rest, _, f)) -> Right (f, LBS.toStrict rest)
-                                   _ -> Left QUICInvalidGoawayData
-        where
-          ss = decodeContextStreamSize ctx
-          getGoawayFrame ::  Get.Get Frame
-          getGoawayFrame = Goaway <$> getStreamId ss <*> getStreamId ss
+        ss = decodeContextStreamSize ctx
 
 
 --

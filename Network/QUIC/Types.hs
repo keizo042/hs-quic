@@ -131,7 +131,7 @@ data FrameType = StreamType Bool StreamSize OffsetSize Bool
                deriving Show
 
 -- | StreamId is type that indicate identify in stream.
-type StreamId = Int
+type StreamId = Int32
 
 -- | Offset is type that indicate offset from Head of Data in Stream Frame
 type Offset = Integer

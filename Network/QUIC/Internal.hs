@@ -8,14 +8,16 @@ module Network.QUIC.Internal
   , getInt48
   , getInt56
   , getInt64
+
+  , putInt24
   ) where
-import Data.Int(Int8)
-import Data.Bits
-import Data.Binary
+import           Data.Binary
 import qualified Data.Binary.Get as Get
+import           Data.Bits
+import           Data.Int        (Int8)
 
 getIntN :: Int -> Get Int
-getIntN 8 = getInt8
+getIntN 8  = getInt8
 getIntN 16 = getInt16
 getIntN 24 = getInt24
 getIntN 32 = getInt32
@@ -57,3 +59,6 @@ getIntNbyte n = foldl f 0 <$> list
     list = (\xs -> zip xs [0..])  <$> (sequence $ replicate n Get.getInt8)
 
     toInt = fromIntegral . toInteger
+
+putInt24 :: Int -> Put
+putInt24 n = error "put utlitiy"

@@ -28,8 +28,9 @@ putStreamId :: StreamId -> Put
 putStreamId sid
   | (sid < 2^8 ) = putWord8 $ fromIntegral sid
   | (sid < 2^16) = putInt16be $ fromIntegral sid
-  | (sid < 2^24) = error "not yet implemented in Network.QUIC.Codec"
+  | (sid < 2^24) = I.putInt24 $ fromIntegral sid
   | otherwise = putInt32be $ fromIntegral sid
+    where
 
 putOffset :: Offset -> Put
 putOffset offset
@@ -59,9 +60,12 @@ putHeader ctx hdr = case hdr of
 
 putLongHeader c pn v = putWord8 0x80 >> putConnectionId c >> putPacketNumber pn >> putQUICVersion v
 
-putShortHeader c pn = putWord8 0x00 >> putConnectionIdMaybe >> putPacketNumber pn
+putShortHeader c pn = putWord8 w >> putConnectionIdMaybe >> putPacketNumber pn
   where
-    putConnectionIdMaybe = if isJust c then putConnectionId $ fromJust c else return ()
+    c' =  isJust c
+    keypahse = undefined
+    w = 0x00 .|. if c' then 0x40 else 0x00 .|. keypahse
+    putConnectionIdMaybe = if c' then putConnectionId $ fromJust c else return ()
 
 
 --
