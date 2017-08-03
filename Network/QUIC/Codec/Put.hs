@@ -2,6 +2,8 @@ module Network.QUIC.Codec.Put
   where
 
 import           Data.Binary.Put
+
+import           Data.Bits
 import           Data.Int
 import           Data.Maybe
 
@@ -12,6 +14,9 @@ import qualified Data.ByteString.Lazy        as LBS
 import           Network.QUIC.Codec.Internal
 import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
+
+runPutStrict :: Put -> ByteString
+runPutStrict  = LBS.toStrict . runPut
 
 putPacketNumber :: PacketNumber -> Put
 putPacketNumber =  putInt64be . fromIntegral

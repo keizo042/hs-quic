@@ -5,8 +5,7 @@ module Network.QUIC.Codec
   )
   where
 
-import qualified Data.Binary.Get             as Get
-import           Data.Binary.Put             (runPut)
+import           Data.Binary                 (Get)
 import           Network.QUIC.Codec.Get
 import           Network.QUIC.Codec.Internal
 import           Network.QUIC.Codec.Put
@@ -310,11 +309,11 @@ encode ctx (ShortPacket hdr payload)  = encodeHeader ctx hdr `BS.append` encodeF
 
 -- | encodeLongPacketPayload
 encodeLongPacketPayload :: EncodeContext -> LongPacketPayload -> ByteString
-encodeLongPacketPayload ctx p = LBS.toStrict . runPut $ putLongPackerPaload ctx p
+encodeLongPacketPayload ctx p = runPutStrict $ putLongPackerPaload ctx p
 
 -- | encodeHeader
 encodeHeader :: EncodeContext -> Header -> ByteString
-encodeHeader ctx hdr = LBS.toStrict . runPut $ putHeader ctx hdr
+encodeHeader ctx hdr = runPutStrict $ putHeader ctx hdr
 
 -- | encodeFrames
 encodeFrames :: EncodeContext -> [Frame] -> ByteString
@@ -323,4 +322,4 @@ encodeFrames ctx (f:fs) = (encodeFrame ctx f) `BS.append` encodeFrames ctx fs
 
 -- | encodeFrame
 encodeFrame :: EncodeContext -> Frame -> ByteString
-encodeFrame ctx frame = LBS.toStrict $ runPut (putFrame ctx frame)
+encodeFrame ctx frame = runPutStrict $ putFrame ctx frame

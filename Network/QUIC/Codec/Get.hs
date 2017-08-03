@@ -109,7 +109,7 @@ getAckBlockLength abl = fromIntegral <$> case abl of
                         AckBlock6Byte -> I.getInt48
 
 -- | getAckBlocks
-getAckBlocks :: Int -> AckBlockLengthSize -> Get.Get AckBlock
+getAckBlocks :: Int -> AckBlockLengthSize -> Get AckBlock
 getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl first)
   where
     getAckBlock abl first = do
@@ -118,7 +118,7 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
       return $ AckBlock ( [pn0, pn0-1.. pn0 - first ] ++  rest )
       where
         getGap = fromIntegral <$> I.getInt8
-        getRestBlock :: AckBlockLengthSize -> PacketNumber ->  Get.Get [PacketNumber]
+        getRestBlock :: AckBlockLengthSize -> PacketNumber ->  Get [PacketNumber]
         getRestBlock abl pn
           | (pn <= 0) = return []
           | otherwise = do
@@ -132,7 +132,7 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
 -- | getAckTimeStamps
 getAckTimeStamps :: PacketNumber  -- Largest Acked
                 -> Integer            -- Delta Largest Acked
-                ->  Get.Get AckTimeStamp
+                ->  Get AckTimeStamp
 getAckTimeStamps lack n = do
     delta0  <- getDelta
     stamp0  <- getQUICTime
@@ -145,7 +145,7 @@ getAckTimeStamps lack n = do
     addQUICTimeDelta :: QUICTime -> AckTimeDelta -> QUICTime
     addQUICTimeDelta time delta = undefined
 
-    getAckTimeStamp :: PacketNumber -> QUICTime -> Integer -> Get.Get [(PacketNumber, QUICTime)]
+    getAckTimeStamp :: PacketNumber -> QUICTime -> Integer -> Get [(PacketNumber, QUICTime)]
     getAckTimeStamp _     time 0 = return []
     getAckTimeStamp lack  time n = do
       gap <- getDelta
