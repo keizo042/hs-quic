@@ -106,20 +106,11 @@ putFrame :: EncodeContext -> Frame -> Put
 putFrame ctx@(EncodeContext ps ss oo fin d) frame = case frame of
   Padding                 -> putFrameType PaddingType  >> putPaddingFrame
   (RstStream s err offset)                   -> putFrameType RstStreamType >> putRstStreamFrame ss s err oo offset
-    where
-      ss = encodeContextStreamSize ctx
-      oo = encodeContextOffsetSize ctx
   (ConnectionClose err s) -> putFrameType ConnectionCloseType  >> putConnectionCloseFrame err s
   (Goaway latest unknown) -> putFrameType GoawayType   >> putGoawayFrame ss latest unknown
-    where
-      ss = encodeContextStreamSize ctx
   (MaxData i)             -> putFrameType MaxDataType  >> putMaxDataFrame i
   (MaxStreamData s i)     -> putFrameType MaxStreamDataType >> putMaxStreamDataFrame ss s i
-    where
-      ss = encodeContextStreamSize ctx
   (MaxStreamId s)         -> putFrameType MaxStreamIdType >> putMaxStreamIdFrame ss s
-    where
-      ss = encodeContextStreamSize ctx
   Ping                    -> putFrameType PingType >> putPingFrame
   Blocked                 -> putFrameType BlockedType >>  putBlockedFrame
   (StreamBlocked s)       -> putFrameType StreamBlockedType >> putStreamBlockedFrame s
@@ -128,11 +119,7 @@ putFrame ctx@(EncodeContext ps ss oo fin d) frame = case frame of
 
   (Stream s o bs)                -> putFrameType styp >> putStreamFrame ss s oo o bs
     where
-      f = encodeContextStreamFin ctx
-      ss = encodeContextStreamSize ctx
-      oo = encodeContextOffsetSize ctx
-      d  = encodeContextStreamHasData ctx
-      styp = StreamType f ss oo d
+      styp = StreamType fin ss oo d
 
   (Ack lack delay blocks stamps) -> putFrameType acktyp >> putAckFrame ctx lack delay blocks stamps
     where
