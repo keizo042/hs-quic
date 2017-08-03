@@ -107,7 +107,6 @@ decodeFrame ctx bss = decodeFrameType b >>= \ ft -> decodeFrame0 ctx ft bs
        MaxDataType            -> decodeMaxDataFrame bs
        PaddingType            -> decodePaddingFrame bs
        PingType               -> decodePingFrame    bs
-
        MaxStreamDataType      -> decodeMaxStreamDataFrame   ctx bs
        MaxStreamIdType        -> decodeMaxStreamIdFrame     ctx bs
        StreamBlockedType      -> decodeStreamBlockedFrame   ctx bs
@@ -115,7 +114,6 @@ decodeFrame ctx bss = decodeFrameType b >>= \ ft -> decodeFrame0 ctx ft bs
        RstStreamType          -> decodeRstStreamFrame       ctx bs
        NewConnectionType      -> decodeNewConnectionIdFrame ctx bs
        ConnectionCloseType    -> decodeConnectionCloseFrame ctx bs
-
 
        (StreamType f ss oo d) -> decodeStreamFrame ctx f ss oo d bs
        (AckType n lack abl)   -> decodeAckFrame ctx n lack abl bs
