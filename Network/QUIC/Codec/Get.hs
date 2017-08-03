@@ -12,7 +12,6 @@ import           Data.Word
 
 import           Network.QUIC.Codec.Internal
 import qualified Network.QUIC.Internal       as I
-import           Network.QUIC.Time
 import           Network.QUIC.Types
 import qualified Network.QUIC.UFloat16       as UF
 
@@ -86,6 +85,7 @@ getShortHeader w = ShortHeader <$> getConnIdMaybe w <*> getPacketNumber (toPacke
 getVersionNegotiation :: Get LongPacketPayload
 getVersionNegotiation = VersionNegotiation <$> getQUICVersion <*> getQUICVersions
 
+{--
 getClientInitial :: Get LongPacketPayload
 getClientInitial         = undefined
 
@@ -102,6 +102,7 @@ getOneRTTProtectedKeyPhaseZero    = undefined
 getOneRTTProtectedKeyPhaseOne     = undefined
 
 getPublicReset = undefined
+--}
 
 --
 --

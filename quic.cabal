@@ -22,7 +22,6 @@ library
                        Network.QUIC.Codec.Internal
                        Network.QUIC.Codec.Put
                        Network.QUIC.Codec.Get
-                       Network.QUIC.Time
                        Network.QUIC.Connection
                        Network.QUIC.Manager
                        Network.QUIC.Priority

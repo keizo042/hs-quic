@@ -22,7 +22,6 @@ import           Data.Word                   (Word8)
 
 import           Network.QUIC
 import qualified Network.QUIC.Internal       as I
-import           Network.QUIC.Time
 import           Network.QUIC.Types
 
 
@@ -40,8 +39,8 @@ decode bs = decodeHeader bs >>= \ (hdr, bs') -> decodePayload hdr bs'
                                        (Left e)  -> Left e
       decodeLongPacket :: DecodeContext -> Header -> ByteString -> QUICResult Packet
       decodeLongPacket ctx hdr bs = case (decodeLongPacketPayload ctx bs) of
-            (Right (payload, bs')) -> Right $ LongPacket hdr payload
-            (Left e)               -> Left e
+            (Right payload) -> Right $ LongPacket hdr payload
+            (Left e)        -> Left e
 
 
 -- | decodeHeader
@@ -65,21 +64,21 @@ decodeHeader bs =  case (toHeaderType b) of
 
 -- | decodeLongPacketPayload that it decode Payload with LongHeader.
 -- | it was chcked  payload type in Long Header prefix octet and parse rest of octet.
-decodeLongPacketPayload :: DecodeContext -> ByteString -> QUICResult (LongPacketPayload, ByteString)
+decodeLongPacketPayload :: DecodeContext -> ByteString -> QUICResult LongPacketPayload
 decodeLongPacketPayload ctx bs = case (decodeContextLongPacketContext ctx) of
        (Just c) -> run (longPacketContextLongHeaderType c) bs
        Nothing  -> Left QUICInvalidPacketHeader
      where
        run typ bs = case typ of
-         VersionNegotiationType           -> runGetOrFailWithError bs getVersionNegotiation   QUICInvalidVersionNegotiationPacket
-         ClientInitialType                -> runGetOrFailWithError bs getClientInitial        QUICInternalError
-         ServerStatelessRetryType         -> runGetOrFailWithError bs getServerStatelessRetry QUICInternalError
-         ServerCleartextType              -> runGetOrFailWithError bs getServerClearText      QUICInternalError
-         ClientCleartextType              -> runGetOrFailWithError bs getClientClearText      QUICInternalError
-         ZeroRTTProtectedType             -> runGetOrFailWithError bs getZeroRTTProtected     QUICInternalError
-         OneRTTProtectedKeyPhaseZeroType  -> runGetOrFailWithError bs getOneRTTProtectedKeyPhaseZero  QUICInternalError
-         OneRTTProctectedKeyPhaseOneType  -> runGetOrFailWithError bs getOneRTTProtectedKeyPhaseOne   QUICInternalError
-         PublicResetType                  -> runGetOrFailWithError bs getPublicReset QUICInternalError
+         VersionNegotiationType           -> fst <$> runGetOrFailWithError bs getVersionNegotiation   QUICInvalidVersionNegotiationPacket
+         ClientInitialType                -> ClientInitial <$> decodeFrames ctx bs
+         ServerStatelessRetryType         -> ServerStatelessRetry <$> decodeFrames ctx bs
+         ServerCleartextType              -> ServerCleartext <$> decodeFrames ctx bs
+         ClientCleartextType              -> ClientCleartext <$> decodeFrames ctx bs
+         ZeroRTTProtectedType             -> ZeroRTTProtected <$> decodeFrames ctx bs
+         OneRTTProtectedKeyPhaseZeroType  -> OneRTTProtectedKeyPhaseZero <$> decodeFrames ctx bs
+         OneRTTProctectedKeyPhaseOneType  -> OneRTTProtectedKeyPhaseOne <$>  decodeFrames ctx bs
+         PublicResetType                  -> PublicReset <$> decodeFrames ctx bs
 
 -- | decodeFrames
 decodeFrames :: DecodeContext -> ByteString -> QUICResult [Frame]

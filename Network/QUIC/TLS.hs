@@ -2,7 +2,6 @@ module Network.QUIC.TLS
   where
 
 import           Data.ByteString    (ByteString)
-import           Network.QUIC.Time
 import           Network.QUIC.Types
 -- TODO: porting from draft code like c++.  It should be replaced more suitable data format.
 -- TODO: it demands to adapt TLS. they are requred TLS extension "quic_transport_paramters".

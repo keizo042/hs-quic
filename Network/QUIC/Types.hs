@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Network.QUIC.Types
   where
 
@@ -10,7 +11,6 @@ import           Data.Default.Class
 import           Data.Int
 import qualified Data.Time.Clock       as Clock
 
-import           Network.QUIC.Time
 import           Network.QUIC.UFloat16
 
 -- | QUICResult is result type in the QUIC protocol context.
@@ -49,15 +49,15 @@ data LongHeaderType = VersionNegotiationType
                     deriving (Show, Eq)
 
 data LongPacketPayload = VersionNegotiation  QUICVersion [QUICVersion]
-                | ClientInitial !ByteString
-                | ServerStatelessRetry !ByteString
-                | ServerCleartext !ByteString
-                | ClientCleartext !ByteString
-                | ZeroRTTProtected !ByteString
-                | OneRTTProtectedKeyPhaseZero !ByteString
-                | OneRTTProtectedKeyPhaseOne !ByteString
-                | PublicReset !ByteString
-                deriving (Show, Eq)
+                | ClientInitial ![Frame]
+                | ServerStatelessRetry ![Frame]
+                | ServerCleartext ![Frame]
+                | ClientCleartext ![Frame]
+                | ZeroRTTProtected ![Frame]
+                | OneRTTProtectedKeyPhaseZero ![Frame]
+                | OneRTTProtectedKeyPhaseOne ![Frame]
+                | PublicReset ![Frame]
+                deriving (Show)
 
 -- | ShortPacketPayload
 type ShortPacketPayload = [Frame]
@@ -75,11 +75,24 @@ data Frame = Stream !StreamId !Offset !ByteString
            | RstStream !StreamId !ErrorCode !Offset
            | Padding
            | Ping
-           | NewConnectionId !Int !ConnectionId -- Sequence ConnectionId
+           | NewConnectionId !Int16 !ConnectionId -- Sequence ConnectionId
            | ConnectionClose !ErrorCode !ByteString -- ErrorCode ErrorMessage
            | Goaway !StreamId !StreamId
            deriving Show
 
+-- | AckBlock is Blocks that is recived  in Ack Frame.
+data AckBlock = AckBlock [PacketNumber]
+              deriving Show
+
+-- | Gap is that gap between previous lost packet and latest one in Ack
+-- Frame.
+type Gap = Int
+
+-- | AckTimeStamp is TimeStamp represent in Ack Frame.
+data AckTimeStamp = AckTimeStamp [(PacketNumber, QUICTime)]
+                  deriving Show
+
+type AckTimeDelta = UFloat16
 
 data PacketNumberSize = PacketNumber1Byte | PacketNumber2Byte | PacketNumber4Byte
                       deriving Show
@@ -138,19 +151,6 @@ type Offset = Integer
 
 -- QUICTime is moved to Network.QUIC.Time module
 
--- | AckBlock is Blocks that is recived  in Ack Frame.
-data AckBlock = AckBlock [PacketNumber]
-              deriving Show
-
--- | Gap is that gap between previous lost packet and latest one in Ack
--- Frame.
-type Gap = Int
-
--- | AckTimeStamp is TimeStamp represent in Ack Frame.
-data AckTimeStamp = AckTimeStamp [(PacketNumber, QUICTime)]
-                  deriving Show
-
-type AckTimeDelta = UFloat16
 
 type PacketNumber = Integer
 
@@ -164,7 +164,66 @@ data Packet = LongPacket  Header LongPacketPayload
             | ShortPacket Header ShortPacketPayload
             deriving Show
 
+-- | QUICTime
+-- TODO: See [draft-ietf-quic-transport-04] Section 8.2.2.1 "Time Format"
+-- We Must implement IEEE74 like time format and the utility.
+-- 16bit unsinged float.
+-- with
+-- mantissa 11 bit
+-- exponent 5 bit
+-- time in microseconds
+newtype QUICTime =  QUICTime Int32
+                   deriving (Show, Eq, Ord, Enum)
 
+instance Real QUICTime where
+    toRational = undefined
+
+
+instance Integral QUICTime where
+    quotRem = undefined
+    toInteger = undefined
+
+instance Num QUICTime where
+    (+) = addQUICTime
+    (-) = subQUICTime
+    (*) = multiQUICTime
+    abs = absQUICTime
+    signum = signumQUICTime
+    fromInteger = undefined
+
+
+parseTime :: ByteString -> QUICTime
+parseTime bs = undefined
+  where
+    mantissa = undefined
+    exponent = undefined
+
+addQUICTime :: QUICTime -> QUICTime -> QUICTime
+addQUICTime = undefined
+
+subQUICTime :: QUICTime -> QUICTime -> QUICTime
+subQUICTime = undefined
+
+multiQUICTime :: QUICTime -> QUICTime -> QUICTime
+multiQUICTime = undefined
+
+absQUICTime = undefined
+signumQUICTime = undefined
+toInt = undefined
+
+diffQUICTime :: QUICTime -> QUICTime -> AckTimeDelta
+diffQUICTime lv rv = undefined
+
+toUTCTime :: QUICTime -> Clock.UTCTime
+toUTCTime = undefined
+
+fromUTCTime :: Clock.UTCTime -> QUICTime
+fromUTCTime = undefined
+
+
+
+--
+--
 -- | ErrorCode is exported error code api.
 -- TODO: check it is good?
 data ErrorCode = ApplicationErrorCode Int
