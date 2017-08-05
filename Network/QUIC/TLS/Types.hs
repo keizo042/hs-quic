@@ -11,8 +11,13 @@ module Network.QUIC.TLS.Types
 import           Data.Int
 import           Network.QUIC.Types
 
-data Typ = ClientHello | EncryptedExtension
+data Typ = ClientHello
+         | EncryptedExtension -- be sent with Server Hello
          deriving (Show, Eq)
+
+detectTyp :: IO Typ
+detecTyp = undefined
+
 data TLSContext = TLSContext { tlsContextRole :: Typ
                 }
                 deriving Show
@@ -24,7 +29,7 @@ data TransportParameterId = TransParamInitialMaxStreamDataType
                           | TransParamTruncateConnectionIdType
                           | TransParamMaxPacketSizeType
                           | TransParamUnknownType Int16
-                          deriving Show
+                          deriving (Show, Eq)
 
 
 data TransportParameter = TransParamInitialMaxStreamData Int32
@@ -33,8 +38,8 @@ data TransportParameter = TransParamInitialMaxStreamData Int32
                         | TransParamIdleTimeout Int16
                         | TransParamTruncateConnectionId ConnectionId
                         | TransParamMaxPacketSize Int16
-                        deriving Show
+                        deriving (Show, Eq)
 
 data TransportParameters = TransportParametersClientHello QUICVersion QUICVersion [TransportParameter]
                          | TransportParametersEncryptedExtensions [QUICVersion] [TransportParameter]
-                         deriving Show
+                         deriving (Show, Eq)
