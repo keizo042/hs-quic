@@ -1,26 +1,48 @@
 module Network.QUIC.TLS
+  (
+  )
   where
 
 import           Data.ByteString    (ByteString)
+import           Data.Int
+import           Data.Word
+
+import           Network.TLS
+
 import           Network.QUIC.Types
 -- TODO: porting from draft code like c++.  It should be replaced more suitable data format.
 -- TODO: it demands to adapt TLS. they are requred TLS extension "quic_transport_paramters".
 
-data TransportParameterId = TransParamInitialMaxStreamData
-                          | TransParamInitialMaxData
-                          | TransParamInitialMaxStreamId
-                          | TransParamIdleTimeout
-                          | TransParamTruncateConnectionId
-                          | TransParamMaxPacketSize
-                          | TransParamUnknown Int
+data TransportParameterId = TransParamInitialMaxStreamDataType
+                          | TransParamInitialMaxDataType
+                          | TransParamInitialMaxStreamIdType
+                          | TransParamIdleTimeoutType
+                          | TransParamTruncateConnectionIdType
+                          | TransParamMaxPacketSizeType
+                          | TransParamUnknownType Int16
                           deriving Show
 
-data TransportParameter = TransportParameter {
-                          transParamId    :: TransportParameterId
-                        , transParamValue :: ByteString
 
-                        }
+data TransportParameter = TransParamInitialiMaxStreamData Int32
+                        | TransParamInitialMaxData Int32
+                        | TransParamInitialMaxStreamId StreamId
+                        | TransParamInitialIdleTimeout Int16
+                        | TransParamTruncateConnectionId ConnectionId
+                        | TransParamMaxPacketSize Int16
                         deriving Show
+
+toTransportParameterId :: Word8 -> TransportParameterId
+toTransportParameterId 0x00 = TransParamInitialMaxStreamDataType
+toTransportParameterId 0x01 = TransParamInitialMaxDataType
+toTransportParameterId 0x02 = TransParamInitialMaxStreamIdType
+toTransportParameterId 0x03 = TransParamIdleTimeoutType
+toTransportParameterId 0x04 = TransParamTruncateConnectionIdType
+toTransportParameterId 0x05 = TransParamMaxPacketSizeType
+
+fromTransParameterId :: TransportParameterId -> Word8
+fromTransParameterId t = case t of
+  TransParamInitialMaxStreamDataType -> undefined
+  _                                  -> undefined
 
 data TransportParameters = TransportParametersClientHello QUICVersion QUICVersion [TransportParameter]
                          | TransportPArametersEncryptedExtensions [QUICVersion] [TransportParameter]
@@ -36,25 +58,3 @@ data Config = Config { configMaxStreamData :: Int
             , configTruncateConnectionId   :: ConnectionId
             , configMaxPacketSize          :: Int}
             deriving Show
-
--- TODO: having our own the handshake procedure is bad practice.
--- We should carry TLS handshake from Network.TLS (tls package)
--- but api is nothing in tls package. So we have implementation for now.
--- it will be replaced.
-
-sendHandshake1RTT = undefined
-  where
-  -- send Client Hello with 1RTT
-  sendClientHello = undefined
-
-  -- recv Server Hello with 1RTT
-  recvServerHello = undefined
-
-
-recvHandshake = undefined
-  where
-  -- recv Client Hello with 1RTT
-  recvClinetHello = undefined
-
-  sendServerHello = undefined
---
