@@ -6,3 +6,4 @@ main :: IO ()
 main = server cfg
   where
     server = undefined
+    run = undefined
