@@ -45,7 +45,7 @@ fromTransParameterId t = case t of
   _                                  -> undefined
 
 data TransportParameters = TransportParametersClientHello QUICVersion QUICVersion [TransportParameter]
-                         | TransportPArametersEncryptedExtensions [QUICVersion] [TransportParameter]
+                         | TransportParametersEncryptedExtensions [QUICVersion] [TransportParameter]
                          deriving Show
 
 -- entity of transport parameters.
