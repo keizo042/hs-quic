@@ -41,14 +41,17 @@ import           Network.QUIC.Codec.Internal
 import           Network.QUIC.Types
 import qualified Network.QUIC.UFloat16       as UF
 
+-- | runGetOrFailWithError
 runGetOrFailWithError :: ByteString -> Get a -> QUICError ->  QUICResult (a, ByteString)
 runGetOrFailWithError bs f e = case (runGetOrFail f $ LBS.fromStrict bs) of
     (Right (bs', _, p)) -> Right (p, LBS.toStrict bs')
     _                   -> Left e
 
+-- | getQUICVersion
 getQUICVersion :: Get QUICVersion
 getQUICVersion = fromIntegral <$> getInt32be
 
+-- | getQUICVersions
 getQUICVersions :: Get [QUICVersion]
 getQUICVersions =  isEmpty >>= \ b -> if b then return [] else get
   where
@@ -98,12 +101,14 @@ getErrorCode = intToErrorCode . fromIntegral <$> getInt32be
 --
 --
 
+-- | getLongHeader
 getLongHeader :: LongHeaderType -> Get Header
 getLongHeader h =  LongHeader h
         <$> getConnectionId
         <*> getPacketNumber PacketNumber4Byte
         <*> getQUICVersion
 
+-- | getShortHeader
 getShortHeader :: Word8 -> Get Header
 getShortHeader w = ShortHeader <$> getConnIdMaybe w <*> getPacketNumber (toPacketNumberSize w)
   where
@@ -115,25 +120,6 @@ getShortHeader w = ShortHeader <$> getConnIdMaybe w <*> getPacketNumber (toPacke
 
 getVersionNegotiation :: Get LongPacketPayload
 getVersionNegotiation = VersionNegotiation <$> getQUICVersion <*> getQUICVersions
-
-{--
-getClientInitial :: Get LongPacketPayload
-getClientInitial         = undefined
-
-getServerStatelessRetry = undefined
-
-getServerClearText = undefined
-
-getClientClearText = undefined
-
-getZeroRTTProtected     = undefined
-
-getOneRTTProtectedKeyPhaseZero    = undefined
-
-getOneRTTProtectedKeyPhaseOne     = undefined
-
-getPublicReset = undefined
---}
 
 --
 --
