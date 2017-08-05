@@ -38,7 +38,6 @@ import           Data.Int
 import           Data.Word
 
 import           Network.QUIC.Codec.Internal
-import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 import qualified Network.QUIC.UFloat16       as UF
 
@@ -48,7 +47,7 @@ runGetOrFailWithError bs f e = case (runGetOrFail f $ LBS.fromStrict bs) of
     _                   -> Left e
 
 getQUICVersion :: Get QUICVersion
-getQUICVersion = fromIntegral <$> I.getInt32
+getQUICVersion = fromIntegral <$> getInt32be
 
 getQUICVersions :: Get [QUICVersion]
 getQUICVersions =  isEmpty >>= \ b -> if b then return [] else get
@@ -58,34 +57,39 @@ getQUICVersions =  isEmpty >>= \ b -> if b then return [] else get
         vs <- getQUICVersions
         return (v:vs)
 
+-- | getQUICTime
 getQUICTime :: Get QUICTime
 getQUICTime = fromIntegral <$> getInt32be
 
+-- | getOffset
 getOffset :: OffsetSize -> Get Offset
 getOffset NoExistOffset = return 0
-getOffset Offset2Byte   = fromIntegral <$> I.getInt16
-getOffset Offset4Byte   = fromIntegral <$> I.getInt32
-getOffset Offset8Byte   = fromIntegral <$> I.getInt64
+getOffset Offset2Byte   = fromIntegral <$> getInt16be
+getOffset Offset4Byte   = fromIntegral <$> getInt32be
+getOffset Offset8Byte   = fromIntegral <$> getInt64be
 
+-- | getStreamId
 getStreamId :: StreamSize -> Get StreamId
-getStreamId ss = fromIntegral <$> case ss of
-                                            Stream1Byte -> I.getInt8
-                                            Stream2Byte -> I.getInt16
-                                            Stream3Byte -> I.getInt24
-                                            Stream4Byte -> I.getInt32
+getStreamId ss = case ss of
+  Stream1Byte -> fromIntegral <$> getInt8
+  Stream2Byte -> fromIntegral <$> getInt16be
+  Stream3Byte -> fromIntegral <$> getInt24be
+  Stream4Byte -> fromIntegral <$> getInt32be
 
+-- | getConnectionId
 getConnectionId :: Get ConnectionId
-getConnectionId = fromIntegral <$> I.getInt64
+getConnectionId = fromIntegral <$> getInt64be
 
+-- | getPacketNumber
 getPacketNumber :: PacketNumberSize ->  Get PacketNumber
-getPacketNumber p = fromIntegral <$> case p of
-  PacketNumber1Byte -> I.getInt8
-  PacketNumber2Byte -> I.getInt16
-  PacketNumber4Byte -> I.getInt32
+getPacketNumber p =  case p of
+  PacketNumber1Byte -> fromIntegral <$> getInt8
+  PacketNumber2Byte -> fromIntegral <$> getInt16be
+  PacketNumber4Byte -> fromIntegral <$> getInt32be
 
 -- | getErrorCode
 getErrorCode :: Get ErrorCode
-getErrorCode = intToErrorCode . fromIntegral <$> I.getInt32
+getErrorCode = intToErrorCode . fromIntegral <$> getInt32be
 
 
 --
@@ -169,7 +173,7 @@ getStreamFrame ctx f ss oo d = Stream  <$> getStreamId ss <*> getOffset oo <*> g
   where
     getStreamData :: Bool -> Get ByteString
     getStreamData d = do
-     n <- if d then I.getInt16 else return 0
+     n <- if d then fromIntegral <$> getInt16be else return 0
      if n == 0 then return BS.empty else getByteString $ fromIntegral n
 
 getGoawayFrame :: StreamSize ->  Get Frame
@@ -188,15 +192,15 @@ getAckFrame n lack abl = getNumBlock n >>=
     getAckBlocksMaybe (Just nblocks) abl =  getAckBlocks nblocks abl
 
     getNumBlock :: Bool -> Get (Maybe Int)
-    getNumBlock n = if n then Just <$> I.getInt8 else return Nothing
+    getNumBlock n = if n then Just <$> fromIntegral <$> getInt8 else return Nothing
     getNTS :: Get Integer
     getNTS = fromIntegral <$> getWord8
     getLAck :: LAckSize -> Get PacketNumber
-    getLAck lack =  fromIntegral <$> case lack of
-                      LAck1Byte -> I.getInt8
-                      LAck2Byte -> I.getInt16
-                      LAck4Byte -> I.getInt32
-                      LAck8Byte -> I.getInt64
+    getLAck lack =  case lack of
+                      LAck1Byte -> fromIntegral <$> getInt8
+                      LAck2Byte -> fromIntegral <$> getInt16be
+                      LAck4Byte -> fromIntegral <$> getInt32be
+                      LAck8Byte -> fromIntegral <$> getInt64be
 
 -- | getAckDelay
 -- TODO:  Time Format
@@ -207,12 +211,12 @@ getAckDelay :: Get  AckTimeDelta
 getAckDelay =  fromIntegral <$> getInt16be
 
 -- | getAckBlockLength
-getAckBlockLength :: AckBlockLengthSize -> Get Integer
-getAckBlockLength abl = fromIntegral <$> case abl of
-                        AckBlock1Byte -> I.getInt8
-                        AckBlock2Byte -> I.getInt16
-                        AckBlock4Byte -> I.getInt32
-                        AckBlock6Byte -> I.getInt48
+getAckBlockLength :: AckBlockLengthSize -> Get PacketNumber
+getAckBlockLength abl = case abl of
+    AckBlock1Byte -> fromIntegral <$> getInt8
+    AckBlock2Byte -> fromIntegral <$> getInt16be
+    AckBlock4Byte -> fromIntegral <$> getInt32be
+    AckBlock6Byte -> fromIntegral <$> getInt48be
 
 -- | getAckBlocks
 getAckBlocks :: Int -> AckBlockLengthSize -> Get AckBlock
@@ -223,7 +227,7 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
       rest  <- getRestBlock abl (pn0 - first)
       return $ AckBlock ( [pn0, pn0-1.. pn0 - first ] ++  rest )
       where
-        getGap = fromIntegral <$> I.getInt8
+        getGap = fromIntegral <$> getInt8
         getRestBlock :: AckBlockLengthSize -> PacketNumber ->  Get [PacketNumber]
         getRestBlock abl pn
           | (pn <= 0) = return []
@@ -248,7 +252,7 @@ getAckTimeStamps lack n = do
     let first = (lack - delta0, stamp0)
     return $ AckTimeStamp (first : rest)
   where
-    getDelta = fromIntegral <$> I.getInt8
+    getDelta = fromIntegral <$> getInt8
     getQUICTimeDelta = getAckDelay
     addQUICTimeDelta :: QUICTime -> AckTimeDelta -> QUICTime
     addQUICTimeDelta time delta = undefined
@@ -261,3 +265,34 @@ getAckTimeStamps lack n = do
       let time' = addQUICTimeDelta time diff
       rest <- getAckTimeStamp lack time' (n - 1)
       return ((lack - gap, time') : rest)
+
+
+
+--- Internal
+
+getInt24be :: Get Int32
+getInt24be = do
+    mb <- fromIntegral <$> getInt16be
+    ml <- fromIntegral <$> getInt8
+    return $ shiftL mb 8 + ml
+
+getInt48be :: Get Int64
+getInt48be = do
+    mb <- fromIntegral <$> getInt32be
+    ml <- fromIntegral <$> getInt16be
+    return $ shiftL mb 16 + ml
+
+
+
+getIntNbyte :: Int -> Get Int
+getIntNbyte 0 = return 0
+getIntNbyte n = foldl f 0 <$> list
+  where
+    f :: Int -> (Int8, Int) -> Int
+    f n (x,i) = n + (shiftL (i * 8) $ toInt x)
+
+    list :: Get [(Int8, Int)]
+    list = (\xs -> zip xs [0..])  <$> (sequence $ replicate n getInt8)
+
+    toInt = fromIntegral . toInteger
+

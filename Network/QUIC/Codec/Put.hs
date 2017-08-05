@@ -12,7 +12,6 @@ import qualified Data.ByteString             as BS
 import qualified Data.ByteString.Lazy        as LBS
 
 import           Network.QUIC.Codec.Internal
-import qualified Network.QUIC.Internal       as I
 import           Network.QUIC.Types
 
 runPutStrict :: Put -> ByteString
@@ -31,7 +30,7 @@ putStreamId :: StreamSize -> StreamId -> Put
 putStreamId size sid = case size of
      Stream1Byte -> putInt8 $ fromIntegral sid
      Stream2Byte -> putInt16be $ fromIntegral sid
-     Stream3Byte -> I.putInt24 $ fromIntegral sid
+     Stream3Byte -> putInt24 $ fromIntegral sid
      Stream4Byte -> putInt32be $ fromIntegral sid
 
 putOffset :: OffsetSize -> Offset -> Put
@@ -220,3 +219,9 @@ putStreamFrame ssize s osize o bs = putStreamId ssize s >> putOffset osize o >> 
     putStreamData bs = putStreamDataLength (BS.length bs) >> putByteString bs
     putStreamDataLength 0 = return ()
     putStreamDataLength i = putInt8 $ fromIntegral i
+
+
+--- Internal
+
+putInt24 :: Int -> Put
+putInt24 n = error "put utlitiy"
