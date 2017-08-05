@@ -1,4 +1,23 @@
 module Network.QUIC.Codec.Put
+  (
+  runPutStrict
+
+  , putPacketNumber
+  , putOffset
+  , putStreamId
+  , putConnectionId
+  , putQUICTime
+  , putQUICVersion
+
+  , putHeader
+
+  , putLongPackerPaload
+  , putVersionNegotiation
+  , putNewConnectionId
+
+  , putFrameType
+  , putFrame
+  )
   where
 
 import           Data.Binary.Put
