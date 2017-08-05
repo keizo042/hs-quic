@@ -1,4 +1,31 @@
 module Network.QUIC.Codec.Get
+  (
+  runGetOrFailWithError
+  , getLongHeader
+  , getShortHeader
+
+  , getQUICTime
+  , getQUICVersion
+  , getQUICVersions
+  , getPacketNumber
+  , getConnectionId
+  , getOffset
+  , getErrorCode
+
+  , getNewConnectionId
+  , getVersionNegotiation
+
+  , getStreamFrame
+  , getAckFrame
+  , getGoawayFrame
+  , getMaxStreamDataFrame
+  , getMaxStreamIdFrame
+  , getMaxDataFrame
+  , getRstStreamFrame
+  , getStreamBlockedFrame
+  , getConnectionCloseFrame
+
+  )
   where
 import           Data.Binary.Get
 
