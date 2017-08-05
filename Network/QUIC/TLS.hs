@@ -51,10 +51,10 @@ data TransportParameters = TransportParametersClientHello QUICVersion QUICVersio
 -- entity of transport parameters.
 -- TODO: the config will be replaced hash map structure.
 -- key: the digit , value: numerical value 0x000 ~ 0xfeff
-data Config = Config { configMaxStreamData :: Int
-            , configMaxData                :: Int
+data Config = Config { configMaxStreamData :: Int32
+            , configMaxData                :: Int32
             , configMaxStreamId            :: StreamId
-            , configTimeout                :: QUICTime
+            , configTimeout                :: Int16
             , configTruncateConnectionId   :: ConnectionId
-            , configMaxPacketSize          :: Int}
+            , configMaxPacketSize          :: Int16}
             deriving Show
