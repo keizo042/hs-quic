@@ -31,6 +31,7 @@ import qualified Data.ByteString             as BS
 import qualified Data.ByteString.Lazy        as LBS
 
 import           Network.QUIC.Codec.Internal
+import           Network.QUIC.TLS.Types
 import           Network.QUIC.Types
 
 runPutStrict :: Put -> ByteString
@@ -240,7 +241,56 @@ putStreamFrame ssize s osize o bs = putStreamId ssize s >> putOffset osize o >> 
     putStreamDataLength i = putInt8 $ fromIntegral i
 
 
+--
+--
+-- QUIC Transport Parameter Extension in TLS
+--
+--
+
+putTransportParameterId :: TransportParameterId -> Put
+putTransportParameterId typ = putInt16be $ fromTransParameterId typ
+
+putTransParams :: [TransportParameter] -> Put
+putTransParams []     = return ()
+putTransParams (p:ps) = putTransParam p >> putTransParams ps
+
+putTransParam :: TransportParameter -> Put
+putTransParam  tp = case tp of
+  TransParamInitialMaxStreamData i   -> putTransportParameterId TransParamInitialMaxStreamDataType >> putInt32be i
+  TransParamInitialMaxData i         -> putTransportParameterId TransParamInitialMaxDataType >> putInt32be i
+  TransParamInitialMaxStreamId i     -> putTransportParameterId TransParamInitialMaxStreamIdType >> putStreamId Stream4Byte i
+  TransParamIdleTimeout to           -> putTransportParameterId TransParamIdleTimeoutType >> putInt16be to
+  TransParamTruncateConnectionId cid -> putTransportParameterId TransParamTruncateConnectionIdType >> putConnectionId cid
+  TransParamMaxPacketSize size       -> putTransportParameterId TransParamMaxPacketSizeType >> putInt16be size
+
+
+
+putTransportParameters :: TransportParameters -> Put
+putTransportParameters params = case params of
+  TransportParametersClientHello v0 v1 ps       -> putTransParamCHELO v0 v1 ps
+    where
+      putTransParamCHELO nego ini ps = putQUICVersion nego >> putQUICVersion ini >> putTransParams ps
+  TransportParametersEncryptedExtensions  vs ps -> putTransParamEncryptedExt vs ps
+    where
+      putTransParamEncryptedExt vs ps = putQUICVersions vs >> putTransParams ps
+      putQUICVersions []     = return ()
+      putQUICVersions (v:vs) = putQUICVersion v >> putQUICVersions vs
+
 --- Internal
 
+fromTransParameterId :: TransportParameterId -> Int16
+fromTransParameterId t = case t of
+  TransParamInitialMaxStreamDataType -> 0x01
+  TransParamInitialMaxDataType       -> 0x02
+  TransParamInitialMaxStreamIdType   -> 0x03
+  TransParamIdleTimeoutType          -> 0x04
+  TransParamTruncateConnectionIdType -> 0x05
+  TransParamMaxPacketSizeType        -> 0x06
+
 putInt24 :: Int -> Put
-putInt24 n = error "put utlitiy"
+putInt24 n = putInt16be n0 >> putInt8 n1
+  where
+    n0 :: Int16
+    n0 = fromIntegral $ shiftR (n .&. 0xff0) 8
+    n1 :: Int8
+    n1 = fromIntegral $ n .&. 0xf

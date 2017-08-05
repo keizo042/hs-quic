@@ -25,6 +25,7 @@ module Network.QUIC.Codec.Get
   , getStreamBlockedFrame
   , getConnectionCloseFrame
 
+  , getTranportParameters
   )
   where
 import           Data.Binary.Get
@@ -38,6 +39,7 @@ import           Data.Int
 import           Data.Word
 
 import           Network.QUIC.Codec.Internal
+import           Network.QUIC.TLS.Types
 import           Network.QUIC.Types
 import qualified Network.QUIC.UFloat16       as UF
 
@@ -269,16 +271,44 @@ getInt48be = do
     return $ shiftL mb 16 + ml
 
 
+toTransportParameterId :: Int16 -> Maybe TransportParameterId
+toTransportParameterId 0x00 = Just TransParamInitialMaxStreamDataType
+toTransportParameterId 0x01 = Just TransParamInitialMaxDataType
+toTransportParameterId 0x02 = Just TransParamInitialMaxStreamIdType
+toTransportParameterId 0x03 = Just TransParamIdleTimeoutType
+toTransportParameterId 0x04 = Just TransParamTruncateConnectionIdType
+toTransportParameterId 0x05 = Just TransParamMaxPacketSizeType
+toTransportParameterId _    = Nothing
 
-getIntNbyte :: Int -> Get Int
-getIntNbyte 0 = return 0
-getIntNbyte n = foldl f 0 <$> list
-  where
-    f :: Int -> (Int8, Int) -> Int
-    f n (x,i) = n + (shiftL (i * 8) $ toInt x)
 
-    list :: Get [(Int8, Int)]
-    list = (\xs -> zip xs [0..])  <$> (sequence $ replicate n getInt8)
+getTransportParameterId :: Get TransportParameterId
+getTransportParameterId = getInt16be >>= \ i -> case (toTransportParameterId i) of
+                  (Just typ) -> return typ
+                  Nothing    -> fail "invalid digit of transport parameter id "
 
-    toInt = fromIntegral . toInteger
 
+getTransportParameter :: TransportParameterId -> Get TransportParameter
+getTransportParameter typ = case typ of
+  TransParamInitialMaxStreamDataType -> TransParamInitialMaxData <$> getInt32be
+  TransParamInitialMaxDataType       -> TransParamInitialMaxData <$> getInt32be
+  TransParamInitialMaxStreamIdType   -> TransParamInitialMaxStreamId <$> getStreamId Stream4Byte
+  TransParamIdleTimeoutType          -> TransParamIdleTimeout <$> getInt16be
+  TransParamTruncateConnectionIdType -> TransParamTruncateConnectionId <$> getConnectionId
+  TransParamMaxPacketSizeType        -> TransParamMaxPacketSize <$> getInt16be
+
+getTransParams :: Get [TransportParameter]
+getTransParams = isEmpty >>= \ b -> if b then return [] else
+                                         do tp <- (getTransportParameterId >>= getTransportParameter)
+                                            tps <- getTransParams
+                                            return (tp:tps)
+
+getTranportParameters :: TLSContext -> Get TransportParameters
+getTranportParameters (TLSContext typ) = case typ of
+    ClientHello        -> getTransParamsClientHello
+    EncryptedExtension -> getTransParamsEncryptedExt
+
+getTransParamsClientHello :: Get TransportParameters
+getTransParamsClientHello = TransportParametersClientHello <$> getQUICVersion <*> getQUICVersion <*> getTransParams
+
+getTransParamsEncryptedExt :: Get TransportParameters
+getTransParamsEncryptedExt = TransportParametersEncryptedExtensions <$> getQUICVersions <*> getTransParams
