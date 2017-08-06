@@ -1,5 +1,43 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Network.QUIC.Types
+  (
+    QUICResult
+  , ErrorCode(..)
+  , QUICError(..)
+  , Context(..)
+
+  , Packet(..)
+  , LongHeaderType(..)
+  , HeaderType(..)
+  , Header(..)
+  , LongPacketPayload(..)
+  , FrameType(..)
+  , Frame(..)
+
+  , PacketNumber
+  , StreamId
+  , ConnectionId
+  , Offset
+  , QUICVersion
+  , QUICTime(..)
+  , diffQUICTime
+  , addQUICTime
+
+  -- internal
+  , AckBlock(..)
+  , AckTimeStamp(..)
+  , AckTimeDelta
+  , Gap
+  , DecodeContext(..)
+  , EncodeContext(..)
+  , LongPacketContext(..)
+  , PacketNumberSize(..)
+  , StreamSize(..)
+  , OffsetSize(..)
+  , AckBlockLengthSize(..)
+  , LAckSize(..)
+  , Mode(..)
+  )
   where
 
 import           Data.ByteString       (ByteString)
