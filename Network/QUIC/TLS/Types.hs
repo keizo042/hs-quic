@@ -16,12 +16,13 @@ data Typ = ClientHello
          deriving (Show, Eq)
 
 detectTyp :: IO Typ
-detecTyp = undefined
+detectTyp = undefined
 
 data TLSContext = TLSContext { tlsContextRole :: Typ
                 }
                 deriving Show
 
+-- | TransportParameterId that indicates transport parameter type.
 data TransportParameterId = TransParamInitialMaxStreamDataType
                           | TransParamInitialMaxDataType
                           | TransParamInitialMaxStreamIdType
@@ -31,7 +32,7 @@ data TransportParameterId = TransParamInitialMaxStreamDataType
                           | TransParamUnknownType Int16
                           deriving (Show, Eq)
 
-
+-- | TransportParameter is that indicates parameter.
 data TransportParameter = TransParamInitialMaxStreamData Int32
                         | TransParamInitialMaxData Int32
                         | TransParamInitialMaxStreamId StreamId
