@@ -20,6 +20,8 @@ module Network.QUIC.Types
   , Offset
   , QUICVersion
   , QUICTime(..)
+  , encodeQUICTime
+  , decodeQUICTime
   , diffQUICTime
   , addQUICTime
 
@@ -55,8 +57,6 @@ type QUICResult a = Either QUICError a
 data Context = Context { ctxMode    :: Mode
                        , ctxVersion :: QUICVersion }
              deriving Show
-
-
 
 -- | LongHeaderContext
 data LongPacketContext = LongPacketContext { longPacketContextLongHeaderType :: LongHeaderType
@@ -226,27 +226,43 @@ instance Num QUICTime where
     fromInteger = undefined
 
 
-parseTime :: ByteString -> QUICTime
-parseTime bs = undefined
-  where
-    mantissa = undefined
-    exponent = undefined
+encodeQUICTime :: Int32 -> QUICTime
+encodeQUICTime i = undefined
+
+decodeQUICTime :: QUICTime -> Int
+decodeQUICTime t = undefined
 
 addQUICTime :: QUICTime -> QUICTime -> QUICTime
-addQUICTime = undefined
+addQUICTime l r = encodeQUICTime $ l' + r'
+  where
+    l' = fromIntegral $ decodeQUICTime l
+    r' = fromIntegral $ decodeQUICTime r
 
 subQUICTime :: QUICTime -> QUICTime -> QUICTime
-subQUICTime = undefined
-
-multiQUICTime :: QUICTime -> QUICTime -> QUICTime
-multiQUICTime = undefined
-
-absQUICTime = undefined
-signumQUICTime = undefined
-toInt = undefined
+subQUICTime l r = encodeQUICTime $ l' - r'
+  where
+    l' = fromIntegral $ decodeQUICTime l
+    r' = fromIntegral $ decodeQUICTime r
 
 diffQUICTime :: QUICTime -> QUICTime -> AckTimeDelta
-diffQUICTime lv rv = undefined
+diffQUICTime l r  = undefined
+
+multiQUICTime :: QUICTime -> QUICTime -> QUICTime
+multiQUICTime l r = encodeQUICTime $ l' * r'
+  where
+    l' = fromIntegral $ decodeQUICTime l
+    r' = fromIntegral $ decodeQUICTime r
+
+absQUICTime :: QUICTime -> QUICTime
+absQUICTime t = encodeQUICTime $ abs $ fromIntegral $ decodeQUICTime t
+
+signumQUICTime = undefined
+
+quicTimeToInteger :: QUICTime -> Int
+quicTimeToInteger = undefined
+
+addQUICTimeAckDelta :: QUICTime -> AckTimeDelta -> QUICTime
+addQUICTimeAckDelta time delta = undefined
 
 toUTCTime :: QUICTime -> UTCTime
 toUTCTime = undefined
