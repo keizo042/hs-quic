@@ -1,8 +1,14 @@
 module Network.QUIC.Connection
   (
+    DataPool
+  , DataMap
+  , StreamData
+
+  , emptyDataPool
   )
   where
 import           Data.ByteString         (ByteString)
+
 import qualified Data.ByteString         as BS
 import qualified Data.ByteString.Lazy    as LBS
 import qualified Data.Map.Strict         as M
@@ -11,52 +17,40 @@ import           Data.Maybe
 import           Control.Concurrent.MVar
 import           Network.QUIC.Types
 
-insertStreamData = undefined
+-- | DataPool is that hold  maping connection-id to  data on a endpoint.
+type DataPool = M.Map ConnectionId (MVar DataMap)
+
+-- | DataMap is that hold data par stream  in each connection triple.
+type DataMap = M.Map StreamId (MVar StreamData)
+
+-- | Stream Data is that Map on a stream to accept out of order data.
+type StreamData = M.Map Offset ByteString
+
+
+--
+-- DataPool Utils
+--
 
 emptyDataPool :: DataPool
 emptyDataPool = M.empty
 
-type DataPool = M.Map ConnectionId (MVar DataMap)
 
--- | Stream Data is that Map , Key: Stream Id / Value: (Packet Number, Data)
--- the data is specific Stream Id Data
-type StreamData = M.Map Offset ByteString
+lookupDataPool :: DataPool -> ConnectionId -> IO (Maybe DataMap)
+lookupDataPool pool c = undefined
 
-type DataMap = M.Map StreamId (MVar StreamData)
 
+---
+--- DataMap Utils
+---
 initDataMap :: DataMap
 initDataMap = M.empty
 
-insertDataMap :: DataMap
-              -> StreamId
-              -> Offset
-              -> ByteString
-              -> DataMap
-insertDataMap m sid ofs bs = modify' sid ofs bs sd m
-    where
-      sd = lookup' sid m
-      lookup' ::  StreamId -> DataMap -> (Maybe StreamData)
-      lookup' sid' m' = M.lookup sid' m'
+lookupDataMap :: DataMap -> StreamId -> IO (Maybe StreamData)
+lookupDataMap map s = undefined
 
-      modify' :: StreamId -> Offset -> ByteString -> (Maybe StreamData) -> DataMap -> DataMap
-      modify' sid' ofs' bs' sd0 m' = M.insert sid' sd1 m'
-        where
-          sd1 = case sd0 of
-                    (Just sd) ->  M.insert ofs' bs' sd
-                    Nothing   ->  M.insert ofs' bs' M.empty
+---
+--- StreamData Utils
+---
 
-dropDataMap :: StreamId -> DataMap -> DataMap
-dropDataMap sid m = M.delete sid m
-
-takeDataMap :: StreamId
-            -> DataMap
-            -> (DataMap, Maybe ByteString)
-takeDataMap sid m = case (M.lookup sid m) of
-                      (Just sd) -> (M.delete sid m, Just $ toBS sd)
-                      (Nothing) -> (m, Nothing)
-                where
-                  toBS :: StreamData -> ByteString
-                  toBS sd = foldl BS.append BS.empty $ map snd $ M.toList sd
-                  f :: ByteString -> (PacketNumber, ByteString) -> ByteString
-                  f b (k,v) = b `BS.append` v
-
+initStreamData :: StreamData
+initStreamData = undefined

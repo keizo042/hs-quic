@@ -224,7 +224,7 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
           | otherwise = do
           gap <- getGap
           len <- getAckBlockLength abl
-          let pn' = (fromIntegral pn) - gap
+          let pn' =  pn - (fromIntegral gap)
               pn''  = pn' - len
               cont :: [PacketNumber]
               cont =  [pn', pn'-1..pn'']

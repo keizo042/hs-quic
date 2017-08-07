@@ -33,6 +33,7 @@ import qualified Data.ByteString.Lazy        as LBS
 import           Network.QUIC.Codec.Internal
 import           Network.QUIC.TLS.Types
 import           Network.QUIC.Types
+import qualified Network.QUIC.UFloat16       as UF
 
 runPutStrict :: Put -> ByteString
 runPutStrict  = LBS.toStrict . runPut
@@ -222,10 +223,13 @@ putAckFrame ctx lsize lacked delay blocks stamps =  do
       putTimestamps lacked time xs
       where
         prevQUICTime :: QUICTime -> AckTimeDelta -> QUICTime
-        prevQUICTime t delta = encodeQUICTime $ t - (UF.decode delta)
+        prevQUICTime t delta = encodeQUICTime $  t' - delta'
+          where
+            t' = fromIntegral (decodeQUICTime t)
+            delta' = fromIntegral (UF.decode delta)
 
-        putGap :: Int8 -> Put
-        putGap = putInt8
+        putGap :: Gap -> Put
+        putGap i = putInt8 $ fromIntegral i
 
         putTimestamps :: PacketNumber -> QUICTime -> [(PacketNumber,QUICTime)] -> Put
         putTimestamps _ _ []             = return ()

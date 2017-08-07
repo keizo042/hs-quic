@@ -4,18 +4,24 @@ module Network.QUIC.Manager
   where
 
 import           Control.Concurrent
+import           Control.Concurrent.Chan
 import           Control.Concurrent.MVar
 
 import qualified Network.Socket          as S
+
+import qualified Data.ByteString         as BS
 
 import           Network.QUIC.Connection
 import           Network.QUIC.Types
 
 
-type Peer = (HostAddress, PortNumber)
+type Peer = (S.HostAddress, S.PortNumber)
 
-data Peers = Peers [(Peers, ConnectionId)]
+newtype Peers = Peers [(Peers, ConnectionId)]
           deriving Show
+
+emptyPeers :: Peers
+emptyPeers = Peers []
 
 -- | ManagerSetting
 data ManagerSetting = ManagerSetting { managerSettingPort :: Int
@@ -34,26 +40,25 @@ data Manager = Manager {  managerDataPool     :: MVar DataPool
                         , managerRecvThreadId :: ThreadId
                         -- hash from 4 tuple to socket
                        }
-             deriving Show
-
 
 openSocket host port = undefined
 
-waitPacket :: Socket -> MVar ByteString -> IO ()
+waitPacket :: S.Socket -> Chan BS.ByteString -> IO ()
 waitPacket sock var = undefined
 
 -- newManager generate `Manager`.
 newManager :: ManagerSetting -> IO Manager
-newManager setting = do
-    sock <- openSocket
-    thid <- forkIO undefined
-    pool <- newMVar emptyDataPool
+newManager (ManagerSetting host port) = do
+    sock  <- openSocket host port
+    bs    <- newChan
+    thid  <- forkIO (waitPacket sock bs)
+    pool  <- newMVar emptyDataPool
     peers <- newMVar emptyPeers
-    return $  Manager emptyDataPool peers sock thid
+    return $  Manager pool peers sock thid
 
 -- closeManager close `Manager`.
 closeManager :: Manager -> IO ()
-closeManager (Manager pool peers sock thread)= do
+closeManager (Manager pool peers sock thread) = do
     return undefined
 
 -- withManager take care action IO a.
