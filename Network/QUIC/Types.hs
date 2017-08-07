@@ -42,7 +42,7 @@ module Network.QUIC.Types
   )
   where
 
-import           Data.ByteString       (ByteString)
+import qualified Data.ByteString       as BS
 import           Data.Default.Class
 import           Data.Int
 import           Data.Time.Clock
@@ -53,9 +53,10 @@ import           Network.QUIC.UFloat16
 type QUICResult a = Either QUICError a
 
 
--- | Context is type that indicates the library main info context.
-data Context = Context { ctxMode    :: Mode
-                       , ctxVersion :: QUICVersion }
+-- | Context is type that indicates connection Context
+data Context = Context { contextMode              :: Mode
+                       , contextNegotiatedVersion :: Maybe QUICVersion
+                       , contextAcceptedData      :: BS.ByteString}
              deriving Show
 
 -- | LongHeaderContext
@@ -98,7 +99,7 @@ type ShortPacketPayload = [Frame]
 
 -- | Frame
 -- TODO: note commnets.
-data Frame = Stream !StreamId !Offset !ByteString
+data Frame = Stream !StreamId !Offset !BS.ByteString
            | Ack !PacketNumber !AckTimeDelta !AckBlock !AckTimeStamp
            | MaxData !Int64
            | MaxStreamData !StreamId !Int64
@@ -110,7 +111,7 @@ data Frame = Stream !StreamId !Offset !ByteString
            | Padding
            | Ping
            | NewConnectionId !Int16 !ConnectionId -- Sequence ConnectionId
-           | ConnectionClose !ErrorCode !ByteString -- ErrorCode ErrorMessage
+           | ConnectionClose !ErrorCode !BS.ByteString -- ErrorCode ErrorMessage
            | Goaway !StreamId !StreamId
            deriving Show
 

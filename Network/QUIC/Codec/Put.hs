@@ -203,13 +203,14 @@ putAckFrame ctx lsize lacked delay blocks stamps =  do
     putAckTimeStamp lacked stamps
   where
     putLargestAcked :: LAckSize -> PacketNumber -> Put
-    putLargestAcked lsize lacked = undefined
+    putLargestAcked lsize lacked = case lsize of
+      _ -> undefined
 
     putAckTimeDelta :: AckTimeDelta -> Put
     putAckTimeDelta delta = putInt16be $ fromIntegral delta
 
     putAckBlocks :: AckBlock -> Put
-    putAckBlocks  (AckBlock blocks) = undefined
+    putAckBlocks  (AckBlock blks) = undefined
 
     putFirstTampStamp :: PacketNumber -> PacketNumber -> QUICTime -> Put
     putFirstTampStamp lacked pn time = (putInt8 $ fromIntegral (lacked - pn)) >> putQUICTime time
@@ -221,9 +222,11 @@ putAckFrame ctx lsize lacked delay blocks stamps =  do
       putTimestamps lacked time xs
       where
         prevQUICTime :: QUICTime -> AckTimeDelta -> QUICTime
-        prevQUICTime = undefined
+        prevQUICTime t delta = encodeQUICTime $ t - (UF.decode delta)
+
         putGap :: Int8 -> Put
         putGap = putInt8
+
         putTimestamps :: PacketNumber -> QUICTime -> [(PacketNumber,QUICTime)] -> Put
         putTimestamps _ _ []             = return ()
         putTimestamps lacked time ((pn,t):xs) = do

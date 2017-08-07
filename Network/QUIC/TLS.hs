@@ -7,8 +7,9 @@ import           Data.ByteString        (ByteString)
 import           Data.Int
 import           Data.Word
 
-import           Network.TLS
+import qualified Network.TLS            as TLS
 
+import           Network.QUIC.Internal
 import           Network.QUIC.TLS.Types
 import           Network.QUIC.Types
 
@@ -22,3 +23,7 @@ data Config = Config { configMaxStreamData :: Int32
             , configTruncateConnectionId   :: ConnectionId
             , configMaxPacketSize          :: Int16}
             deriving Show
+
+instance TLS.HasBackend Context where
+    initializeBackend _ = return ()
+    getBackend ctx = TLS.Backend (return ()) (contextClose ctx) (contextSend ctx) (contextRecv ctx)

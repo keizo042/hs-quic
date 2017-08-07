@@ -215,7 +215,9 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
       rest  <- getRestBlock abl (pn0 - first)
       return $ AckBlock ( [pn0, pn0-1.. pn0 - first ] ++  rest )
       where
+        getGap :: Get Gap
         getGap = fromIntegral <$> getInt8
+
         getRestBlock :: AckBlockLengthSize -> PacketNumber ->  Get [PacketNumber]
         getRestBlock abl pn
           | (pn <= 0) = return []
@@ -231,29 +233,48 @@ getAckBlocks nblock abl = getAckBlockLength abl >>= (\ first -> getAckBlock abl 
 
 -- | getAckTimeStamps
 getAckTimeStamps :: PacketNumber  -- Largest Acked
-                -> Integer            -- Delta Largest Acked
+                -> Integer            -- times for Delta Largest Acked
                 ->  Get AckTimeStamp
 getAckTimeStamps lack n = do
     delta0  <- getDelta
     stamp0  <- getQUICTime
-    rest    <- getAckTimeStamp lack stamp0 (n - 1)
-    let first = (lack - delta0, stamp0)
+    rest    <- getAckTimeStamp lack stamp0 n
+    let first = (gapToPacketNumber lack delta0, stamp0)
     return $ AckTimeStamp (first : rest)
   where
+    getDelta :: Get Gap
     getDelta = fromIntegral <$> getInt8
+
+    getQUICTimeDelta :: Get AckTimeDelta
     getQUICTimeDelta = getAckDelay
-    addQUICTimeDelta :: QUICTime -> AckTimeDelta -> QUICTime
-    addQUICTimeDelta time delta = undefined
+
+
+    gapToPacketNumber :: PacketNumber -> Gap -> PacketNumber
+    gapToPacketNumber pn gap = pn - (fromIntegral gap)
+
+    diffToTime :: QUICTime -> AckTimeDelta -> QUICTime
+    diffToTime t delta = encodeQUICTime $  t0 + delta0
+      where
+        t0 = fromIntegral $ decodeQUICTime t
+        delta0 = fromIntegral $ UF.decode delta
 
     getAckTimeStamp :: PacketNumber -> QUICTime -> Integer -> Get [(PacketNumber, QUICTime)]
-    getAckTimeStamp _     time 0 = return []
-    getAckTimeStamp lack  time n = do
-      gap <- getDelta
-      diff <- getQUICTimeDelta
-      let time' = addQUICTimeDelta time diff
-      rest <- getAckTimeStamp lack time' (n - 1)
-      return ((lack - gap, time') : rest)
+    getAckTimeStamp lack time n = getts n >>=  \ l -> return $ convert lack time l
+      where
+        convert :: PacketNumber -> QUICTime -> [(Gap, AckTimeDelta)] -> [(PacketNumber, QUICTime)]
+        convert lack time []     = []
+        convert lack time (x:xs) = (pn, t) : convert lack t xs
+          where
+            pn = gapToPacketNumber lack $ fst x
+            t = diffToTime time $ snd x
 
+        getts :: Integer -> Get [(Gap, AckTimeDelta)]
+        getts 1 = return []
+        getAts n = do
+          gap <- getDelta
+          diff <- getQUICTimeDelta
+          rest <- getts (n -1)
+          return (( gap, diff) : rest)
 
 
 --- Internal
