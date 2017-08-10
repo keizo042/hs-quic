@@ -38,9 +38,7 @@ instance TLS.HasBackend Context where
     initializeBackend _ = return ()
     getBackend c = TLS.Backend (return ()) (contextClose ctx) (contextSend ctx) (contextRecv ctx)
       where
-        ctx = new c
-        new :: Context -> TLSContext
-        new = undefined
+        ctx = contextTLSContext c
 
 data QUICException = QUICInternalException
                    deriving Show
@@ -62,19 +60,16 @@ contextSend ctx bs = send ctx bs
     send :: TLSContext -> BS.ByteString -> IO ()
     send ctx bs = check ctx >>=  \ s -> putMVar sender (s,bs)
       where
-        (Sender sender) = tlsContextSender ctx
-
+        sender = undefined
     check :: TLSContext -> IO StreamId
-    check ctx =  tryReadMVar (tlsContextStreamId ctx) >>= \ ident -> case ident of
-      (Just v) -> modifyMVar (tlsContextStreamId ctx) (\ i -> return (i + 2, i + 2))
-      Nothing  -> throwIO QUICInternalException -- TODO: consider exception type
-
+    check ctx =  undefined
 -- | ContextRecv
 contextRecv :: TLSContext -> Int -> IO BS.ByteString
 contextRecv ctx _ = recv bs b
   where
     i = 1000 -- TODO: use timeout value in config
-    (Reciver bs b)  = tlsContextReciver ctx
+    bs = undefined
+    b = undefined
     recv :: (Chan BS.ByteString) -> (MVar Bool) -> IO BS.ByteString
     recv bs b = (timeout i $ takeMVar b) >>= \ flag -> case flag of
       Nothing -> return BS.empty

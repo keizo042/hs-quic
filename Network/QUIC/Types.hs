@@ -2,9 +2,13 @@
 module Network.QUIC.Types
   (
     QUICResult
+  , ManagerSetting(..)
+  , Manager(..)
   , ErrorCode(..)
   , QUICError(..)
   , Context(..)
+  , Session(..)
+  , TLSContext(..)
 
   , Packet(..)
   , LongHeaderType(..)
@@ -58,15 +62,33 @@ import           Network.QUIC.UFloat16
 -- | QUICResult is result type in the QUIC protocol context.
 type QUICResult a = Either QUICError a
 
--- | Context is type that indicates a Context in a connection.
-data Context = Context { contextNegotiatedVersion :: Maybe QUICVersion
-                       , contextTimeout           :: Int16
-                       , contextConnectionId      :: ConnectionId
+-- | ManagerSetting
+data ManagerSetting = ManagerSetting { managerSettingPort :: Int
+                                     , managerSettingHost :: !String}
+                    deriving Show
 
-                       , contextTLSSender            :: Map StreamId (Chan BS.ByteString, Chan Bool)
-                       , contextTLSReceiver          :: MVar BS.ByteString }
-                       -- , contextPreSharedKey :: Maybe PSK
+-- | Manager is manager that handle QUIC runtime.
+-- one application only has one manager.
+data Manager = Manager {  managerSocket   :: S.Socket
+                        , managerSessions :: Map ConnectionId Session
+                       }
 
+-- | Session is a session that handle multiplex stream.
+-- in other word, it is Connection Context.
+data Session = Session { sessionStreams :: Map StreamId (Chan (Offset, BS.ByteString))
+                        ,sessionStreamsFinish:: Map StreamId (MVar Bool)
+                        ,sessionTimeout :: MVar Int16
+                        }
+
+-- | Context is a stream context.
+-- the "Context" send and recive byte.
+data Context = Context {  contextStreamFinish  :: MVar Bool
+                        , contextStreamReciver :: (Offset, BS.ByteString)
+                        , contextStreamSender  :: MVar StreamId
+                        , contextTLSContext    :: TLSContext
+                        }
+
+-- TODO: rename
 -- | LongHeaderContext
 data LongPacketContext = LongPacketContext { longPacketContextLongHeaderType :: LongHeaderType
                                            , longPacketContextKeyPhase :: Bool }
@@ -282,11 +304,28 @@ toUTCTime = undefined
 fromUTCTime :: UTCTime -> QUICTime
 fromUTCTime = undefined
 
+--
+--
+-- TLS
+--
+--
 
+
+-- | Sender from TLS to UDP socket
+data Sender = Sender (MVar (StreamId, BS.ByteString))
+
+-- | Reciver from UDP to TLS
+data Reciver = Reciver (Chan BS.ByteString) (MVar Bool)
+
+-- | TLSContext
+data TLSContext = TLSContext
 
 --
 --
 -- | ErrorCode is exported error code api.
+--
+--
+
 -- TODO: check it is good?
 data ErrorCode = ApplicationErrorCode Int
                | HostLocalErrorCode Int
