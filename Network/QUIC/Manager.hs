@@ -34,10 +34,12 @@ defaultManagerSetting :: ManagerSetting
 defaultManagerSetting = ManagerSetting 4043 "localhost"
 
 -- | Manager is that manage QUIC runtime, socket, mapping connection id to data, etcetc
-data Manager = Manager {  managerDataPool     :: MVar DataPool
-                        , managerPeers        :: MVar Peers
-                        , managerSocket       :: S.Socket
-                        , managerRecvThreadId :: ThreadId
+data Manager = Manager {  managerDataPool    :: MVar DataPool
+                        , managerPeers       :: MVar Peers
+                        , managerSocket      :: S.Socket
+                        , managerThreadId    :: ThreadId
+                        , managerDataSender  :: ChannelMap
+                        , managerDataReciver :: ChannelMap
                         -- hash from 4 tuple to socket
                        }
 

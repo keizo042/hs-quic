@@ -25,7 +25,7 @@ module Network.QUIC.Codec.Get
   , getStreamBlockedFrame
   , getConnectionCloseFrame
 
-  , getTranportParameters
+--  , getTranportParameters
   )
   where
 import           Data.Binary.Get
@@ -323,6 +323,7 @@ getTransParams = isEmpty >>= \ b -> if b then return [] else
                                             tps <- getTransParams
                                             return (tp:tps)
 
+{--
 getTranportParameters :: TLSContext -> Get TransportParameters
 getTranportParameters (TLSContext typ) = case typ of
     ClientHello        -> getTransParamsClientHello
@@ -333,3 +334,4 @@ getTransParamsClientHello = TransportParametersClientHello <$> getQUICVersion <*
 
 getTransParamsEncryptedExt :: Get TransportParameters
 getTransParamsEncryptedExt = TransportParametersEncryptedExtensions <$> getQUICVersions <*> getTransParams
+--}

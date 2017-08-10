@@ -42,22 +42,29 @@ module Network.QUIC.Types
   )
   where
 
-import qualified Data.ByteString       as BS
+import           Control.Concurrent.Chan
+import           Control.Concurrent.MVar
+
+import qualified Data.ByteString         as BS
 import           Data.Default.Class
 import           Data.Int
 import           Data.Time.Clock
+
+import qualified Network.Socket          as S
 
 import           Network.QUIC.UFloat16
 
 -- | QUICResult is result type in the QUIC protocol context.
 type QUICResult a = Either QUICError a
 
+-- | Context is type that indicates a Context in a connection.
+data Context = Context { contextNegotiatedVersion :: Maybe QUICVersion
+                       , contextTimeout           :: Int16
+                       , contextConnectionId      :: ConnectionId
 
--- | Context is type that indicates connection Context
-data Context = Context { contextMode              :: Mode
-                       , contextNegotiatedVersion :: Maybe QUICVersion
-                       , contextAcceptedData      :: BS.ByteString}
-             deriving Show
+                       , contextTLSSender            :: Map StreamId (Chan BS.ByteString, Chan Bool)
+                       , contextTLSReceiver          :: MVar BS.ByteString }
+                       -- , contextPreSharedKey :: Maybe PSK
 
 -- | LongHeaderContext
 data LongPacketContext = LongPacketContext { longPacketContextLongHeaderType :: LongHeaderType
@@ -129,9 +136,6 @@ data AckTimeStamp = AckTimeStamp [(PacketNumber, QUICTime)]
 
 type AckTimeDelta = UFloat16
 
-data PacketNumberSize = PacketNumber1Byte | PacketNumber2Byte | PacketNumber4Byte
-                      deriving Show
-
 data DecodeContext = DecodeContext { decodeContextStreamSize :: StreamSize
                                    , decodeContextOffsetSize :: OffsetSize
                                    , decodeContextPacketNumberSize :: PacketNumberSize
@@ -145,19 +149,23 @@ data EncodeContext = EncodeContext { encodeContextPacketNumberSize  :: PacketNum
                                    , encodeContextStreamHasData     :: Bool }
                                    deriving Show
 
+
 -- | Internal use
+data PacketNumberSize = PacketNumber1Byte | PacketNumber2Byte | PacketNumber4Byte
+                      deriving Show
+-- | StreamSize is for internal use
 data StreamSize = Stream1Byte | Stream2Byte | Stream3Byte | Stream4Byte
                 deriving (Show, Eq)
 
--- | Internal use
+-- | OffsetSize is for internal use
 data OffsetSize = NoExistOffset | Offset2Byte | Offset4Byte | Offset8Byte
                 deriving (Show, Eq)
 
--- | Internal use
+-- | LAckSize is for internal use
 data LAckSize = LAck1Byte | LAck2Byte | LAck4Byte | LAck8Byte
                 deriving (Show, Eq)
 
--- | Internal use
+-- | AckBlockLengthSize is for internal use
 data AckBlockLengthSize = AckBlock1Byte | AckBlock2Byte | AckBlock4Byte | AckBlock6Byte
                 deriving (Show, Eq)
 
@@ -186,11 +194,13 @@ type Offset = Integer
 
 -- QUICTime is moved to Network.QUIC.Time module
 
-
+-- | PacketNumber
 type PacketNumber = Int64
 
+-- | ConnectionId
 type ConnectionId = Int64
 
+-- | QUICVersion
 type QUICVersion = Int32
 
 -- TODO: on LongPacket, Payload filed is not suitable. it will be removed.

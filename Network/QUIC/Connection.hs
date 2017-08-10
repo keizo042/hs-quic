@@ -3,6 +3,7 @@ module Network.QUIC.Connection
     DataPool
   , DataMap
   , StreamData
+  , ChannelMap
 
   , emptyDataPool
   )
@@ -26,6 +27,9 @@ type DataMap = M.Map StreamId (MVar StreamData)
 -- | Stream Data is that Map on a stream to accept out of order data.
 type StreamData = M.Map Offset ByteString
 
+-- | ChannelMap is that mapping connection id to bytestring in the
+-- individual context.
+type ChanelMap = M.Map ConnectionId (MVar ByteString)
 
 --
 -- DataPool Utils
