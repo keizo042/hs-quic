@@ -29,7 +29,7 @@ type StreamData = M.Map Offset ByteString
 
 -- | ChannelMap is that mapping connection id to bytestring in the
 -- individual context.
-type ChanelMap = M.Map ConnectionId (MVar ByteString)
+type ChannelMap = M.Map ConnectionId (MVar ByteString)
 
 --
 -- DataPool Utils

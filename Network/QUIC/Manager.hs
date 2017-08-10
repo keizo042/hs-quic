@@ -56,13 +56,13 @@ newManager (ManagerSetting host port) = do
     thid  <- forkIO (waitPacket sock bs)
     pool  <- newMVar emptyDataPool
     peers <- newMVar emptyPeers
-    return $  Manager pool peers sock thid
+    return $  undefined
 
 -- closeManager close `Manager`.
 closeManager :: Manager -> IO ()
-closeManager (Manager pool peers sock thread) = do
+closeManager mgr = do
     return undefined
 
 -- withManager take care action IO a.
 withManager :: Manager -> IO a -> IO [Frame]
-withManager (Manager pool perrs sock thread) f = undefined
+withManager mgr f = undefined

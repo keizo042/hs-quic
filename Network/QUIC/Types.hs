@@ -48,6 +48,7 @@ import           Control.Concurrent.MVar
 import qualified Data.ByteString         as BS
 import           Data.Default.Class
 import           Data.Int
+import           Data.Map
 import           Data.Time.Clock
 
 import qualified Network.Socket          as S

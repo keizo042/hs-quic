@@ -36,7 +36,7 @@ data Config = Config { configMaxStreamData :: Int32
 
 instance TLS.HasBackend Context where
     initializeBackend _ = return ()
-    getBackend c = TLS.Backend (\ _ -> return ()) (contextClose ctx) (contextSend ctx) (contextRecv ctx)
+    getBackend c = TLS.Backend (return ()) (contextClose ctx) (contextSend ctx) (contextRecv ctx)
       where
         ctx = new c
         new :: Context -> TLSContext
@@ -50,6 +50,10 @@ instance Exception QUICException
 -- |  contextNew
 contextNew :: Mode -> Int16 -> ConnectionId -> IO Context
 contextNew mode i cid = error "initialize TLSContext"
+
+-- | contextClose
+contextClose :: TLSContext -> IO ()
+contextClose ctx = undefined
 
 -- | contextSend
 contextSend :: TLSContext -> BS.ByteString -> IO ()
