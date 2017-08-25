@@ -1,9 +1,7 @@
 module Network.QUIC.TLS
   (
     Config(..)
-  , contextNew
-  , contextSend
-  , contextRecv
+  , tlsContextNew
   )
   where
 
@@ -26,6 +24,10 @@ import           Network.QUIC.Types
 -- entity of transport parameters.
 -- TODO: the config will be replaced hash map structure.
 -- key: the digit , value: numerical value 0x000 ~ 0xfeff
+--
+-- because  transport parameters is defined as TLS Extension.
+-- TLS Extension have two element, key digit, value octets.
+-- it should have similar structure, digit as key, and corresponding value.
 data Config = Config { configMaxStreamData :: Int32
             , configMaxData                :: Int32
             , configMaxStreamId            :: StreamId
@@ -36,7 +38,7 @@ data Config = Config { configMaxStreamData :: Int32
 
 instance TLS.HasBackend Context where
     initializeBackend _ = return ()
-    getBackend c = TLS.Backend (return ()) (contextClose ctx) (contextSend ctx) (contextRecv ctx)
+    getBackend c = TLS.Backend (return ()) (tlsContextClose ctx) (tlsContextSend ctx) (tlsContextRecv ctx)
       where
         ctx = contextTLSContext c
 
@@ -45,17 +47,24 @@ data QUICException = QUICInternalException
 
 instance Exception QUICException
 
--- |  contextNew
-contextNew :: Mode -> Int16 -> ConnectionId -> IO Context
-contextNew mode i cid = error "initialize TLSContext"
+
+--
+--
+-- QUIC Context subset as TLS Backend
+--
+--
+
+-- |  tlsContextNew
+tlsContextNew :: Mode -> Int16 -> ConnectionId -> IO Context
+tlsContextNew mode i cid = error "initialize TLSContext"
 
 -- | contextClose
-contextClose :: TLSContext -> IO ()
-contextClose ctx = undefined
+tlsContextClose :: TLSContext -> IO ()
+tlsContextClose ctx = undefined
 
--- | contextSend
-contextSend :: TLSContext -> BS.ByteString -> IO ()
-contextSend ctx bs = send ctx bs
+-- | tlsContextSend
+tlsContextSend :: TLSContext -> BS.ByteString -> IO ()
+tlsContextSend ctx bs = send ctx bs
   where
     send :: TLSContext -> BS.ByteString -> IO ()
     send ctx bs = check ctx >>=  \ s -> putMVar sender (s,bs)
@@ -63,9 +72,10 @@ contextSend ctx bs = send ctx bs
         sender = undefined
     check :: TLSContext -> IO StreamId
     check ctx =  undefined
--- | ContextRecv
-contextRecv :: TLSContext -> Int -> IO BS.ByteString
-contextRecv ctx _ = recv bs b
+
+-- | tlsContextRecv
+tlsContextRecv :: TLSContext -> Int -> IO BS.ByteString
+tlsContextRecv ctx _ = recv bs b
   where
     i = 1000 -- TODO: use timeout value in config
     bs = undefined
