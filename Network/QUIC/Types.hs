@@ -24,10 +24,6 @@ module Network.QUIC.Types
   , Offset
   , QUICVersion
   , QUICTime(..)
-  , encodeQUICTime
-  , decodeQUICTime
-  , diffQUICTime
-  , addQUICTime
 
   -- internal
   , AckBlock(..)
@@ -82,7 +78,7 @@ data Session = Session { sessionStreams :: Map StreamId (Chan (Offset, BS.ByteSt
                         ,sessionParams :: MVar ConnectionParams
                         }
 
-data ConenctionParams = ConnectionParams
+data ConnectionParams = ConnectionParams
                       deriving Show
 
 -- | Context is a stream context.

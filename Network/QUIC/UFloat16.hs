@@ -38,6 +38,11 @@ maxUFloat = 0xFFFF
 maxUFloatAsUINT64 :: Int
 maxUFloatAsUINT64 = 0x3FFC0000000
 
+-- |
+-- encode is that from 64 bit signed int to unsigned float
+--
+-- >>> (decode . encode 0x42) == 0x42
+-- True
 encode :: Int -> UFloat16
 encode n = if n < (1 `shiftL` 12) then fromIntegral n else v
           where

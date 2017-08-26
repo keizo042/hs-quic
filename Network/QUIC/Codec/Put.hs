@@ -31,6 +31,7 @@ import qualified Data.ByteString             as BS
 import qualified Data.ByteString.Lazy        as LBS
 
 import           Network.QUIC.Codec.Internal
+import           Network.QUIC.QUICTime
 import           Network.QUIC.TLS.Types
 import           Network.QUIC.Types
 import qualified Network.QUIC.UFloat16       as UF

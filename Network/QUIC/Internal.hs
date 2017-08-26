@@ -3,6 +3,9 @@ module Network.QUIC.Internal
   )
   where
 
+import           Data.Int
+import           Network.QUIC.Types
+
 
 limitPMTU :: Int -> Bool
 limitPMTU i = upper i && lower i

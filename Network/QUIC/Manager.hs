@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Network.QUIC.Manager
   (
     newManager
@@ -33,15 +34,15 @@ defaultManagerSetting = ManagerSetting 4043 "localhost"
 -- >>> newManager defaultManagerSetting
 -- Manager
 newManager :: ManagerSetting -> IO Manager
-newManager (ManagerSetting host port) = do
-    sock <- open host port
+newManager (ManagerSetting port host) = do
+    sock <- open host (show port)
     map <- newMVar M.empty
     return $ Manager sock map
       where
-        open :: ByteString -> Int -> IO Socket
+        open :: String -> String -> IO S.Socket
         open host port = do
           let hints = S.defaultHints{ S.addrSocketType = S.Datagram  }
-          addrs <- S.getAddrInfo (Just hints) (Just host) (Just port)
+          addrs <- S.getAddrInfo (Just hints) (Just port) (Just host)
           let addr = head addrs
           S.socket (S.addrFamily addr) (S.addrSocketType addr) (S.addrProtocol addr)
 
