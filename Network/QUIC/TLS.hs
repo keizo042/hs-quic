@@ -23,11 +23,9 @@ import           Network.QUIC.Types
 
 -- entity of transport parameters.
 -- TODO: the config will be replaced hash map structure.
--- key: the digit , value: numerical value 0x000 ~ 0xfeff
---
--- because  transport parameters is defined as TLS Extension.
--- TLS Extension have two element, key digit, value octets.
--- it should have similar structure, digit as key, and corresponding value.
+-- TODO: it move to TLS library
+-- it seems TLS Extension use in hs-tls require  I modify the library.
+
 data Config = Config { configMaxStreamData :: Int32
             , configMaxData                :: Int32
             , configMaxStreamId            :: StreamId

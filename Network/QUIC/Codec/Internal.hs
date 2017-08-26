@@ -125,26 +125,26 @@ fromFrameType BlockedType            = 0x09
 fromFrameType StreamBlockedType      = 0x0a
 fromFrameType NewConnectionType      = 0x0b
 fromFrameType (StreamType f ss oo d) = 0xa0 - 0xbf
-                                    .|. fin f
-                                    .|. stream ss
-                                    .|. offset oo
-                                    .|. adata d
+                                    .|. toFin f
+                                    .|. toStream ss
+                                    .|. toOffset oo
+                                    .|. toData d
   where
-    fin True  = 0x20
-    fin False = 0x00
+    toFin True  = 0x20
+    toFin False = 0x00
 
-    stream Stream1Byte =0x00
-    stream Stream2Byte =0x08
-    stream Stream3Byte =0x10
-    stream Stream4Byte =0x18
+    toStream Stream1Byte =0x00
+    toStream Stream2Byte =0x08
+    toStream Stream3Byte =0x10
+    toStream Stream4Byte =0x18
 
-    offset NoExistOffset = 0x00
-    offset Offset2Byte   = 0x02
-    offset Offset4Byte   = 0x04
-    offset Offset8Byte   = 0x06
+    toOffset NoExistOffset = 0x00
+    toOffset Offset2Byte   = 0x02
+    toOffset Offset4Byte   = 0x04
+    toOffset Offset8Byte   = 0x06
 
-    adata True  = 0x01
-    adata False = 0x00
+    toData True  = 0x01
+    toData False = 0x00
 
 fromFrameType (AckType n ll mm) =  0xc0 - 0xff
                               .|. nblock n
