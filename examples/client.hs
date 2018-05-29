@@ -1,23 +1,15 @@
 module Main where
 
 import qualified Data.ByteString as BS
-import           Network.QUIC
+import qualified Network.QUIC.Client as C
 
-uname = "localhost"
-uport = 8081
-
-lhost = "localhost"
-lport = 8082
-
-msg = "hello world"
-
-cfg = undefined
+name  = "localhost"
+port = 8081
+body = "hello world"
 
 main :: IO ()
 main = do
-    mgr <- newManager cfg
-    handshake mgr
-    con <- send mgr uhost uport msg
-    m <- recv mgr con
-    BS.putStrLn m
-    closeManager mgr
+    conn <- C.connect name port
+    msg <- C.send body 
+    BS.putStrLn msg
+    C.close conn
