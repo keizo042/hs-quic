@@ -3,7 +3,7 @@ version: '0.1.0.0'
 description: quic implementation
 category: Web
 author: Koichi Nakanishi
-maintainer: keizo.bookman@gmail.com
+maintainer: keizo042dev@gmail.com
 copyright: 2017 Koichi Nakanishi
 license: BSD3
 github: keizo042/quic
