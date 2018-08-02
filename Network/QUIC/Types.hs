@@ -15,6 +15,8 @@ type ConnectionId = Integer
 
 data Offset
 
+data StreamID
+
 data PlainPayload
 
 data ProtectedPayload = ProtectedPayload [Frame]
@@ -86,3 +88,14 @@ data StreamFrame = StreamFrame
 
 data CryptoFrame = CryptoFrame
     deriving (Show,Eq)
+
+data ConnectionState = ConnectionState {
+                       connStateConnectionId :: Maybe ConnectionId
+                     , connStateLAcked       :: PacketNumber
+                     }
+
+data StreamState = StreamState {
+                streamStateStreamID :: StreamID
+                }
+
+data KeyState = KeyState
