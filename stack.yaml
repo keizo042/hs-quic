@@ -36,10 +36,10 @@ resolver: lts-8.20
 # non-dependency (i.e. a user package), and its test suites and benchmarks
 # will not be run. This is useful for tweaking upstream packages.
 packages:
-- '.'
+- "."
 - location: 
-    git: https://github.com/kazu-yamamoto/hs-tls.git
-    commit: 96544ea12eaeda9fd55fc99c0e64e56b7e63fa4e
+    git: https://github.com/keizo042/hs-tls.git
+    commit: 6a3694f976fb2b549a0aa393c95069b5d21440bf
   extra-dep: true
   subdirs: 
     - core
