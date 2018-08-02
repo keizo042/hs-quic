@@ -1,2 +1,3 @@
-module Network.QUIC () where
+module Network.QUIC where
 
+import           Network.QUIC.Types ()

@@ -1,11 +1,24 @@
-module Network.QUIC.Types (
-                          Frame(..)
-                          ) where
+module Network.QUIC.Types where
 
+-- | Token is a connection token.
+-- | it is used Initial/Retry Phase.
+data Token
 
-data Payload
+data Length = Length1 | Length2 | Length4 | Length8
+            deriving (Show, Eq)
 
-data ProtectedPayload
+data Version
+
+type PacketNumber = Integer
+
+type ConnectionId = Integer
+
+data Offset
+
+data PlainPayload
+
+data ProtectedPayload = ProtectedPayload [Frame]
+    deriving (Show,Eq)
 
 data Frame = PADDING
            | RST_STREAM RstStreamFrame
@@ -13,6 +26,7 @@ data Frame = PADDING
            | APPLICATION_CLOSE ApplicationCloseFrame
            | MAX_DATA MaxDataFrame
            | MAX_STREAM_DATA MaxStreamDataFrame
+           | MAX_STREAM_ID MaxStreamIdFrame
            | PING
            | BLOCKED BlockedFrame
            | STREAM_BLOCKED StreamBlockedFrame
@@ -20,33 +34,55 @@ data Frame = PADDING
            | NEW_CONNECTION_ID NewConnectionIdFrame
            | STOP_SENDING StopSendingFrame
            | ACK AckFrame
+           | ACK_ECN
+           | PATH_CHALEENGE
+           | PATH_RESPONSE
+           | NEW_TOKEN
            | STREAM StreamFrame
+           | CRYPTO CryptoFrame
            deriving (Eq, Show)
 
-data RstStreamFrame
+data RstStreamFrame = RstStreamFrame
+    deriving (Show,Eq)
 
-data ConnectionCloseFrame
+data ConnectionCloseFrame = ConnectionCloseFrame
+    deriving (Show,Eq)
 
-data ApplicationCloseFrame
+data ApplicationCloseFrame = ApplicationCloseFrame
+    deriving (Show,Eq)
 
-data MaxStreamDataFrame
+data MaxDataFrame = MaxDataFrame
+    deriving (Show,Eq)
 
-data BlockedFrame
+data MaxStreamDataFrame = MaxStreamDataFrame
+    deriving (Show,Eq)
 
-data StreamBlockedFrame
+data MaxStreamIdFrame = MaxStreamIdFrame
+    deriving (Show,Eq)
 
-data MaxDataFrame
+data BlockedFrame = BlockedFrame
+    deriving (Show,Eq)
 
-data MaxStreamDataFrame
+data StreamBlockedFrame = StreamBlockedFrame
+    deriving (Show,Eq)
 
-data BlockedFrame
+data StreamIdBlockedFrame = StreamIdBlockedFrame
+    deriving (Show,Eq)
 
-data StreamBlockedFrame
+data NewConnectionIdFrame = NewConnectionIdFrame
+    deriving (Show,Eq)
 
-data StreamIdBlockedFrame
+data StopSendingFrame = StopSendingFrame
+    deriving (Show,Eq)
 
-data StopSendingFrame
+data AckFrame = AckFrame
+    deriving (Show,Eq)
 
-data AckFrame
+data AckEcnFrame = AckEcnFrame
+    deriving (Show,Eq)
 
-data StreamFrame
+data StreamFrame = StreamFrame
+    deriving (Show,Eq)
+
+data CryptoFrame = CryptoFrame
+    deriving (Show,Eq)

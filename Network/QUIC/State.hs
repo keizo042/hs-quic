@@ -1,7 +1,7 @@
 module Network.QUIC.State () where
 
-data ConnectionState
+data ConnectionState = ConnectionState
 
-data StremState
+data StremState = StremState
 
-data KeyState
+data KeyState = KeyState
