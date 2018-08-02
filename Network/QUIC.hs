@@ -1,3 +1,4 @@
 module Network.QUIC where
 
-import           Network.QUIC.Types ()
+import           Network.QUIC.Context (Context)
+import           Network.QUIC.Types   (Version)

@@ -1,4 +1,6 @@
 module Network.QUIC.Context () where
 
-data Context = Context { }
+-- | `Context` is a connection context.
+data Context = Context { cxtConnectionId :: ConnectionId
+             }
 
