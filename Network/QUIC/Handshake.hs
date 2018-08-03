@@ -1,3 +1,5 @@
-module Network.QUIC.Handshake () where
+module Network.QUIC.Handshake
+  (
+  ) where
 
 import           Network.QUIC.Handshake.Client

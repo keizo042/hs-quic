@@ -1,4 +1,11 @@
-module Network.QUIC.Backend () where
+module Network.QUIC.Backend
+  (
+    Backend
+  , BackendParams
+  , defaultParams
+  , newBackend
+  , newBackendWith
+  ) where
 
 import           Network.Socket
 

@@ -1,4 +1,6 @@
-module Network.QUIC.Context () where
+module Network.QUIC.Context
+  ( Context
+  ) where
 
 import           Network.QUIC.Backend
 import           Network.QUIC.Types

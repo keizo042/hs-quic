@@ -34,13 +34,19 @@ data ProtectedPacketType = ProtectedPacketTypePADDING
 
 
 data LongHeader = LongHeader Version ConnectionId ConnectionId PacketNumber
+                deriving (Show, Eq)
 
-data ShortHeader = ShortHeader ConnectionId PacketNumber ProtectedPayload
+data ShortHeader = ShortHeader ConnectionId PacketNumber
+                 deriving (Show, Eq)
 
 data InitalPacket = InitalPacket LongHeader Token
+                  deriving (Show, Eq)
 
 data RetryPacket = RetryPacket LongHeader ConnectionId Token
+                 deriving (Show, Eq)
 
 data HandshakePacket = HandshakePacket LongHeader [Frame]
+                     deriving (Show, Eq)
 
-data ProtectedPacket = ProtectedPacket ShortHeader
+data ProtectedPacket = ProtectedPacket ShortHeader ProtectedPayload
+                     deriving (Show, Eq)

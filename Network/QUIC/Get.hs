@@ -1,1 +1,3 @@
-module Network.QUIC.Get () where
+module Network.QUIC.Get
+  (
+  ) where

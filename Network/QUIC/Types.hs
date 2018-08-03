@@ -2,24 +2,29 @@ module Network.QUIC.Types where
 
 -- | Token is a connection token.
 -- | it is used Initial/Retry Phase.
-data Token
+data Token = Token
+    deriving (Show, Eq)
 
 data Length = Length1 | Length2 | Length4 | Length8
             deriving (Show, Eq)
 
-data Version
+data Version = Version
+             deriving (Show, Eq)
 
 type PacketNumber = Integer
 
 type ConnectionId = Integer
 
-data Offset
+data Offset = Offset
+            deriving (Show, Eq)
 
-data StreamID
+data StreamID = StreamID
+              deriving (Show, Eq)
+
 
 data PlainPayload
 
-data ProtectedPayload = ProtectedPayload [Frame]
+data ProtectedPayload = ProtectedPayload
     deriving (Show,Eq)
 
 data Frame = PADDING
