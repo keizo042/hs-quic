@@ -22,10 +22,11 @@ data StreamID = StreamID
               deriving (Show, Eq)
 
 
-data PlainPayload
+data PlainPayload = PlainPayload
+                  deriving(Show, Eq)
 
 data ProtectedPayload = ProtectedPayload
-    deriving (Show,Eq)
+                      deriving (Show, Eq)
 
 data Frame = PADDING
            | RST_STREAM RstStreamFrame
