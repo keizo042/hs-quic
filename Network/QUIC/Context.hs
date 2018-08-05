@@ -4,10 +4,13 @@ module Network.QUIC.Context
 
 import           Control.Concurrent.MVar
 import           Network.QUIC.Backend
+import           Network.QUIC.Keys
 import           Network.QUIC.Types
 
 -- | `Context` is a connection context.
-data Context = Context { cxtConnectionId :: Maybe ConnectionId
+data Context = Context {
+               cxtConnectionId :: Maybe ConnectionId
+             , ctxKeyState     :: KeyState
              }
 
 contextNew :: Backend -> IO Context

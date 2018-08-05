@@ -4,7 +4,9 @@ module Network.QUIC.Keys
   )
   where
 
-data KeyState = KeyState { keyStateTranscriptHash :: ByteString
+data KeyState = KeyState {
+                keyStateTranscriptHash :: ByteString
+              , keyStateRandom         :: Int
               }
               deriving (Show, Eq)
 
