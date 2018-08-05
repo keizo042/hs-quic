@@ -9,7 +9,7 @@ main = do
     let hostname = "localhost"
         port = "8081"
     sock <- newUDPSocket
-    ctx <- contextNew sock defaultQUICParams
+    ctx <- contextNew sock serverParams
     runEcho ctx `catch` (\ SomeException e  -> print e >> contextClose ctx)
 
 

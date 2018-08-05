@@ -11,7 +11,7 @@ main = do
     let name  = "localhost"
         port = 8081
     sock <- newUDPSocket name port
-    ctx <- contextNew sock defaultQUICParams
+    ctx <- contextNew sock clientParams
     handshake ctx
     bs <- sendData ctx body
     putStrLn bs

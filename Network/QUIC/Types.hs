@@ -104,4 +104,15 @@ data StreamState = StreamState {
                 streamStateStreamID :: StreamID
                 }
 
-data KeyState = KeyState
+data KeyState = KeyState {
+              keyStateTranscriptHash :: ByteString
+              }
+
+
+data Endpoint = Client | Server
+
+-- | QUICParams indicates client or server role?
+class QUICParams a where
+    getEndpoint :: a -> Endpoint
+    doHandshake :: a -> Context -> IO ()
+
