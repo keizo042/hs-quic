@@ -11,7 +11,7 @@ import qualified Network.TLS        as TLS
 handshakeClient :: Context -> IO ()
 handshakeClient ctx = do
     sendInitial ctx
-    tlsHandshake ctx
+    tlsHandshakeClient ctx
 
 -- TODO: select supported version
 isSuppertedVersions :: [Version] -> Maybe Version
@@ -27,7 +27,7 @@ sendInitial ctx = do
       _                                 -> undefined -- TODO: Throw Error as handshake error
 
 
-tlsHandshake :: Context -> IO ()
-tlsHandshake ctx = undefined
+tlsHandshakeClient :: Context -> IO ()
+tlsHandshakeClient ctx = undefined
 -- TODO: after recv Handshake Packet with Long header.
 -- start Handshake Protocol on CRYPTO Frame with AEAD.
