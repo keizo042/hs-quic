@@ -1,4 +1,13 @@
-module Network.QUIC.Packet () where
+module Network.QUIC.Packet
+  (
+    Packet(..)
+  , recvPacket
+  , sendPacket
+
+  ,
+    recvPacket
+  ,
+  ) where
 
 import           Data.ByteString
 import           Network.QUIC.Types
@@ -39,10 +48,19 @@ data LongHeader = LongHeader Version (Maybe ConnectionID) (Maybe ConnectionID) P
 data ShortHeader = ShortHeader ConnectionId PacketNumber
                  deriving (Show, Eq)
 
-data InitalPacket = InitalPacket LongHeader Token
+
+data Packet = PacketInitial InitialPacket
+            | PacketRetry RetryPacket
+            | PacketHandshake HandshakePacket
+            | PacketVersionNegotiation VersionNegotiationPacket
+            | PacketProcteded ProtectedPacket
+            deriving (Show, Eq)
+
+data InitialPacket = InitialPacket LongHeader Token
                   deriving (Show, Eq)
 
-data VersionNegotiatinPacket = VersionNegotiatinPacket Version (Maybe ConnectionID) (Maybe ConnectionID) Version [Version]
+data VersionNegotiationPacket = VersionNegotiationPacket Version (Maybe ConnectionID) (Maybe ConnectionID) Version [Version]
+
 data RetryPacket = RetryPacket LongHeader ConnectionId Token
                  deriving (Show, Eq)
 
@@ -51,3 +69,20 @@ data HandshakePacket = HandshakePacket LongHeader [Frame]
 
 data ProtectedPacket = ProtectedPacket ShortHeader ProtectedPayload
                      deriving (Show, Eq)
+
+
+sendPacket :: Context -> Packet -> IO ()
+sendPacket ctx pkt = undefind
+-- TODO: encrypt with prefer TLS ecnryption level in Context send sockaddr
+-- corresponding ConnectionID.
+
+
+recvPacket :: Context -> IO Packet
+recvPacket ctx = undefined
+-- TODO: decrypt with keys in Context and put haskell ADT.
+-- raise error when
+-- * invalid packet form.
+-- * invalid encryption.
+--
+-- not raise error at here
+-- * invalid packet on the processing stage.
