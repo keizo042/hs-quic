@@ -4,5 +4,7 @@ module Network.QUIC.ErrCode
   ) where
 
 
-data QUICError = QUICError
+data QUICError = InternalQUICError
+               | HandshakeQUICError
+               | ApplicationQUICError
                deriving (Show, Eq)

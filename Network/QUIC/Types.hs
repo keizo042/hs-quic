@@ -13,7 +13,7 @@ data Version = Version
 
 type PacketNumber = Integer
 
-type ConnectionId = Integer
+type ConnectionID = Integer
 
 data Offset = Offset
             deriving (Show, Eq)
@@ -39,7 +39,7 @@ data Frame = PADDING
            | BLOCKED BlockedFrame
            | STREAM_BLOCKED StreamBlockedFrame
            | STREAM_ID_BLOCKED StreamIdBlockedFrame
-           | NEW_CONNECTION_ID NewConnectionIdFrame
+           | NEW_CONNECTION_ID NewConnectionIDFrame
            | STOP_SENDING StopSendingFrame
            | ACK AckFrame
            | ACK_ECN
@@ -77,7 +77,7 @@ data StreamBlockedFrame = StreamBlockedFrame
 data StreamIdBlockedFrame = StreamIdBlockedFrame
     deriving (Show,Eq)
 
-data NewConnectionIdFrame = NewConnectionIdFrame
+data NewConnectionIDFrame = NewConnectionIDFrame
     deriving (Show,Eq)
 
 data StopSendingFrame = StopSendingFrame
@@ -96,7 +96,7 @@ data CryptoFrame = CryptoFrame
     deriving (Show,Eq)
 
 data ConnectionState = ConnectionState {
-                       connStateConnectionId :: Maybe ConnectionId
+                       connStateConnectionID :: Maybe ConnectionID
                      , connStateLAcked       :: PacketNumber
                      }
 
